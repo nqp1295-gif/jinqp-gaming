@@ -1091,11 +1091,20 @@ function AuthModal({
     try {
       if (tab === "login") {
         const res = await action("auth.signin", { email: email.trim(), password });
-        if (res.user) {
-          localStorage.setItem("jinqp_user", JSON.stringify(res.user));
-          notify(`Chào mừng ${res.user.name || res.user.email} đã đăng nhập thành công!`);
-          onSuccess(res.user);
+        const userObj = res?.user || res;
+        if (userObj && (userObj.id || userObj.userId)) {
+          const session = {
+            userId: userObj.userId || userObj.id,
+            id: userObj.id || userObj.userId,
+            email: userObj.email,
+            name: userObj.name || userObj.email?.split("@")[0]
+          };
+          localStorage.setItem("jinqp_user", JSON.stringify(session));
+          notify(`Chào mừng ${session.name} đã đăng nhập thành công!`);
+          onSuccess(session);
           onClose();
+        } else {
+          throw new Error("Không thể xác thực thông tin đăng nhập.");
         }
       } else {
         const res = await action("auth.signup", {
@@ -1103,11 +1112,20 @@ function AuthModal({
           email: email.trim(),
           password
         });
-        if (res.user) {
-          localStorage.setItem("jinqp_user", JSON.stringify(res.user));
-          notify(`Tạo tài khoản thành công! Chào mừng ${res.user.name}!`);
-          onSuccess(res.user);
+        const userObj = res?.user || res;
+        if (userObj && (userObj.id || userObj.userId)) {
+          const session = {
+            userId: userObj.userId || userObj.id,
+            id: userObj.id || userObj.userId,
+            email: userObj.email,
+            name: userObj.name || userObj.email?.split("@")[0]
+          };
+          localStorage.setItem("jinqp_user", JSON.stringify(session));
+          notify(`Tạo tài khoản thành công! Chào mừng ${session.name}!`);
+          onSuccess(session);
           onClose();
+        } else {
+          throw new Error("Không thể tạo tài khoản.");
         }
       }
     } catch (err: any) {

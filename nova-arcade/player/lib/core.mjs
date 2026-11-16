@@ -492,7 +492,8 @@ export async function signUpUser(db, input, now = Date.now()) {
   } catch {}
 
   const u = await one(db, "SELECT * FROM app_users WHERE id = ?", [userId]);
-  return { id: u.id, name: u.name, email: u.email, country: u.country, level: u.level };
+  const userPayload = { id: u.id, userId: u.id, name: u.name, email: u.email, country: u.country, level: u.level };
+  return { ok: true, user: userPayload, ...userPayload };
 }
 
 export async function signInUser(db, input) {
@@ -510,7 +511,8 @@ export async function signInUser(db, input) {
     }
   }
 
-  return { id: u.id, name: u.name, email: u.email, country: u.country, level: u.level };
+  const userPayload = { id: u.id, userId: u.id, name: u.name, email: u.email, country: u.country, level: u.level };
+  return { ok: true, user: userPayload, ...userPayload };
 }
 
 export async function membership(db, userId, now = Date.now()) {
@@ -1614,6 +1616,16 @@ export async function adminAction(db, actor, action, input = {}) {
     ]).run();
     await checkAndProcessLevelUp(db, input.userId);
     return { saved: true };
+  }
+
+  if (action === "user.reset_password") {
+    const newPassword = str(input.password || "123456", 1, 100, "Mật khẩu mới");
+    const newHash = await hashPassword(newPassword);
+    await db.batch([
+      stmt(db, "UPDATE app_users SET password_hash=? WHERE id=?", [newHash, input.userId]),
+      auditStatement(db, actor, action, str(input.userId, 1, 100, "Tài khoản"), `Đặt lại mật khẩu thành công`)
+    ]);
+    return { success: true, newPassword };
   }
 
   throw new AppError("Chức năng quản trị không hợp lệ.", 404);

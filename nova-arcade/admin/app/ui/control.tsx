@@ -87,6 +87,21 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
   const [adjustCoins, setAdjustCoins] = useState(10000);
   const [adminLoggedIn, setAdminLoggedIn] = useState(true);
 
+  const handleResetPassword = async (u: any) => {
+    const newPw = window.prompt(`Đặt lại mật khẩu mới cho tài khoản ${u.email}:`, "123456");
+    if (!newPw) return;
+    setBusy(true);
+    try {
+      await action("user.reset_password", { userId: u.id, password: newPw });
+      window.alert(`Đã đổi mật khẩu thành công cho ${u.email} thành: ${newPw}`);
+      await reload();
+    } catch (err: any) {
+      window.alert(err.message || "Lỗi khi đổi mật khẩu.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const nav = [
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
     { id: "giftcodes", label: "Mã Giftcode", icon: Gift },
@@ -741,6 +756,9 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                                 <div style={{ display: "flex", gap: 6 }}>
                                   <button className="text-button" onClick={() => setAdjustUserModal(u)} title="Cộng giờ chơi hoặc xu nạp để test tăng cấp">
                                     + Cấp/Xu
+                                  </button>
+                                  <button className="text-button" onClick={() => handleResetPassword(u)} title="Đặt lại mật khẩu cho tài khoản">
+                                    Đổi MK
                                   </button>
                                   <button className="text-button" onClick={() => setDecision({ type: "user", item: u })} disabled={busy}>
                                     {u.banned ? "Mở khóa" : "Tạm khóa"}
