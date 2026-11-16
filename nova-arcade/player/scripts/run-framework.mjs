@@ -1,6 +1,22 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import fs from "node:fs";
 import { readExecutionProfile } from "./execution-profile.mjs";
+
+// Ensure vinext error-boundary-navigation hook dispatcher safety
+try {
+  const p = fileURLToPath(new URL("../node_modules/vinext/dist/shims/error-boundary-navigation.js", import.meta.url));
+  if (fs.existsSync(p)) {
+    let code = fs.readFileSync(p, "utf-8");
+    if (code.includes("React$1.useContext(getClientNavigationRenderContext())")) {
+      code = code.replace(
+        /function useErrorBoundaryPathname\(\)[\s\S]*?return committedPathname;\s*\}/,
+        `function useErrorBoundaryPathname() {\n\treturn getClientPathnameSnapshot();\n}`
+      );
+      fs.writeFileSync(p, code, "utf-8");
+    }
+  }
+} catch {}
 
 const [command, ...args] = process.argv.slice(2);
 if (!["dev", "build"].includes(command)) throw new Error("Expected dev or build.");
