@@ -6,12 +6,12 @@ echo ===================================================
 echo.
 
 echo [1/2] Dang khoi dong Player App (Port 5173)...
-start "JINQP Player (Port 5173)" cmd /k "cd /d \"%~dp0nova-arcade\player\" && npm run dev -- --port 5173"
+start "JINQP Player (Port 5173)" cmd /k "cd /d \"%~dp0nova-arcade\player\" && npm run dev -- --host 0.0.0.0 --port 5173"
 
 timeout /t 3 /nobreak > nul
 
 echo [2/2] Dang khoi dong Admin Control (Port 5174)...
-start "JINQP Admin (Port 5174)" cmd /k "cd /d \"%~dp0nova-arcade\admin\" && npm run dev -- --port 5174"
+start "JINQP Admin (Port 5174)" cmd /k "cd /d \"%~dp0nova-arcade\admin\" && npm run dev -- --host 0.0.0.0 --port 5174"
 
 echo.
 echo ===================================================

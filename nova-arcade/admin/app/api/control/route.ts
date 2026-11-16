@@ -3,9 +3,24 @@ import { getChatGPTUser } from "../../chatgpt-auth";
 
 export const dynamic = "force-dynamic";
 
+function isAllowedOrigin(originHeader: string | null, requestUrl: string): boolean {
+  if (!originHeader) return true;
+  try {
+    const originUrl = new URL(originHeader);
+    const host = originUrl.host.toLowerCase();
+    if (host.includes("chiprin.com") || host.includes("localhost") || host.includes("127.0.0.1")) {
+      return true;
+    }
+    const currentOrigin = new URL(requestUrl).origin;
+    return originHeader === currentOrigin;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    if (request.headers.get("origin") !== new URL(request.url).origin || !request.headers.get("content-type")?.startsWith("application/json")) {
+    if (!isAllowedOrigin(request.headers.get("origin"), request.url) || !request.headers.get("content-type")?.startsWith("application/json")) {
       return Response.json({ error: "Yêu cầu không được phép." }, { status: 403 });
     }
 
@@ -51,7 +66,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers,
       body: raw,
-      redirect: "error",
+      redirect: "follow",
       signal: AbortSignal.timeout(15000)
     });
 
