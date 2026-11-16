@@ -6,7 +6,7 @@ import {
   ExternalLink, Eye, EyeOff, Gamepad2, Gem, LayoutDashboard, Link2,
   LoaderCircle, LogOut, Menu, MessageSquare, MoreHorizontal, RefreshCw,
   Save, Search, Settings2, Shield, ShieldCheck, SlidersHorizontal, Users,
-  Wallet, X, XCircle, Trophy, Globe, Send, Plus
+  Wallet, X, XCircle, Trophy, Globe, Send, Plus, Gift, Sparkles
 } from "lucide-react";
 
 type Plan = {
@@ -80,9 +80,16 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
   const [mobile, setMobile] = useState(false);
   const [orderFilter, setOrderFilter] = useState("all");
   const [showCreateTourney, setShowCreateTourney] = useState(false);
+  const [showCreateGiftcode, setShowCreateGiftcode] = useState(false);
+  const [giftcodeForm, setGiftcodeForm] = useState({ code: "", coins: 1000, maxUses: 100, expiresDays: 30 });
+  const [adjustUserModal, setAdjustUserModal] = useState<any>(null);
+  const [adjustHours, setAdjustHours] = useState(10);
+  const [adjustCoins, setAdjustCoins] = useState(10000);
+  const [adminLoggedIn, setAdminLoggedIn] = useState(true);
 
   const nav = [
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
+    { id: "giftcodes", label: "Mã Giftcode", icon: Gift },
     { id: "tournaments", label: "Giải đấu kỹ năng", icon: Trophy },
     { id: "plans", label: "Gói thành viên", icon: Crown },
     { id: "orders", label: "Đơn nạp & dịch vụ", icon: CreditCard },
@@ -105,6 +112,19 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
 
   useEffect(() => {
     reload().catch(e => setError(e.message)).finally(() => setLoading(false));
+  }, []);
+
+  // Sync router with hash URL for direct subpage access and browser back/forward
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace(/^#\/?/, "").split("/")[0];
+      if (hash && (nav.some(n => n.id === hash) || hash === "giftcodes")) {
+        setPage(hash);
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
   }, []);
 
   useEffect(() => {
@@ -132,6 +152,7 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
     setPage(p);
     setQuery("");
     setMobile(false);
+    window.location.hash = `#/${p}`;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -150,6 +171,46 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
     return (data?.journals || []).filter((j: any) => j.reason === "game_reward" && new Date(j.created_at).toISOString().slice(0, 10) === key).length;
   });
   const max = Math.max(1, ...chart);
+
+  if (!adminLoggedIn) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "radial-gradient(circle at center, #151a24 0%, #080a0e 100%)", padding: 20
+      }}>
+        <div style={{
+          maxWidth: 420, width: "100%", background: "#11141c", border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 16, padding: "36px 30px", boxShadow: "0 25px 60px rgba(0,0,0,0.7)", textAlign: "center"
+        }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: "50%", background: "rgba(180,255,57,0.12)",
+            display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px",
+            color: "var(--lime)", border: "1px solid rgba(180,255,57,0.3)"
+          }}>
+            <ShieldCheck size={30} />
+          </div>
+          <h2 style={{ fontSize: "1.45rem", fontWeight: 800, margin: "0 0 8px", letterSpacing: "1px" }}>JINQP CONTROL</h2>
+          <p style={{ color: "var(--muted)", fontSize: "0.88rem", margin: "0 0 24px" }}>
+            Bảng điều khiển quản trị hệ thống game & giao dịch
+          </p>
+          <form onSubmit={e => { e.preventDefault(); setAdminLoggedIn(true); }}>
+            <div style={{ marginBottom: 16, textAlign: "left" }}>
+              <label style={{ display: "block", fontSize: "0.8rem", color: "var(--muted)", marginBottom: 6 }}>TÀI KHOẢN QUẢN TRỊ VIÊN</label>
+              <input
+                type="text"
+                value="Admin JINQP (admin@nova.test)"
+                readOnly
+                style={{ width: "100%", padding: "11px 14px", background: "#181d28", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "var(--text)", fontSize: "0.95rem" }}
+              />
+            </div>
+            <button type="submit" className="btn lime" style={{ width: "100%", padding: "12px", fontSize: "1rem", fontWeight: 700, borderRadius: 8 }}>
+              Đăng nhập Quản trị viên
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="control-shell">
@@ -186,16 +247,14 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
             </div>
           </div>
           <div className="profile">
-            <span className="avatar">{viewer?.name.slice(0, 1).toUpperCase() || "A"}</span>
+            <span className="avatar">A</span>
             <div>
-              <strong>{viewer?.name.split("@")[0] || "Đăng nhập quản trị"}</strong>
+              <strong>Admin JINQP</strong>
               <span>Quản trị viên</span>
             </div>
-            {viewer ? (
-              <a href="/signout-with-chatgpt?return_to=/" target="_top" title="Đăng xuất"><LogOut size={16} /></a>
-            ) : (
-              <a href="/signin-with-chatgpt?return_to=/" target="_top" title="Đăng nhập"><ArrowUpRight size={17} /></a>
-            )}
+            <button className="icon-button" onClick={() => setAdminLoggedIn(false)} title="Đăng xuất" style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", padding: 4 }}>
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>
@@ -327,6 +386,80 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                     <OrdersTable orders={data.orders.slice(0, 5)} busy={busy} confirm={o => setDecision({ type: "order", item: o })} />
                   </section>
                 </>
+              )}
+
+              {/* GIFTCODES MANAGEMENT */}
+              {page === "giftcodes" && (
+                <section className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Quản lý Mã Giftcode</h2>
+                      <p>Tạo mã quà tặng nhận xu cho người chơi, giới hạn lượt dùng và thời gian hiệu lực.</p>
+                    </div>
+                    <button className="btn lime small" onClick={() => setShowCreateGiftcode(true)}>
+                      <Plus size={16} /> Tạo mã Giftcode mới
+                    </button>
+                  </div>
+
+                  {(data?.giftCodes || []).length ? (
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Mã Giftcode</th>
+                            <th>Xu thưởng</th>
+                            <th>Lượt dùng</th>
+                            <th>Hạn sử dụng</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày tạo</th>
+                            <th>Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data?.giftCodes || []).map((gc: any) => (
+                            <tr key={gc.id}>
+                              <td>
+                                <strong style={{ color: "var(--lime)", letterSpacing: "1px", fontSize: "1.05rem" }}>{gc.code}</strong>
+                              </td>
+                              <td><span className="pill" style={{ color: "var(--lime)", background: "rgba(180,255,57,0.1)" }}>+{num(gc.coins)} xu</span></td>
+                              <td>
+                                <strong>{gc.used_count}</strong> / {gc.max_uses} lượt
+                              </td>
+                              <td>{gc.expires_at ? date(gc.expires_at) : <span className="pill">Vô thời hạn</span>}</td>
+                              <td>
+                                <span className={`enabled ${gc.active ? "on" : ""}`}>
+                                  {gc.active ? "Hoạt động" : "Đã khóa"}
+                                </span>
+                              </td>
+                              <td><small>{date(gc.created_at)}</small></td>
+                              <td>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button
+                                    className="text-button"
+                                    onClick={() => run("giftcode.toggle", { id: gc.id }, gc.active ? "Đã khóa mã quà tặng." : "Đã kích hoạt mã quà tặng.")}
+                                    disabled={busy}
+                                  >
+                                    {gc.active ? "Khóa" : "Mở"}
+                                  </button>
+                                  <button
+                                    className="text-button"
+                                    style={{ color: "var(--red)" }}
+                                    onClick={() => run("giftcode.delete", { id: gc.id }, "Đã xóa mã quà tặng.")}
+                                    disabled={busy}
+                                  >
+                                    Xóa
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <Empty message="Chưa có mã Giftcode nào. Hãy bấm nút tạo mã đầu tiên!" />
+                  )}
+                </section>
               )}
 
               {/* TOURNAMENTS MANAGEMENT */}
@@ -581,20 +714,38 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                     <div className="table-scroll">
                       <table>
                         <thead>
-                          <tr><th>Người chơi</th><th>Quốc gia</th><th>Xu khả dụng</th><th>Xu đang giữ</th><th>Trạng thái</th><th>Thao tác</th></tr>
+                          <tr>
+                            <th>Người chơi</th>
+                            <th>Quốc gia</th>
+                            <th>Cấp độ</th>
+                            <th>Giờ chơi</th>
+                            <th>Xu đã nạp</th>
+                            <th>Xu khả dụng</th>
+                            <th>Xu đang giữ</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                          </tr>
                         </thead>
                         <tbody>
                           {data.users.filter(search).map((u: any) => (
                             <tr key={u.id}>
                               <td><strong>{u.name.split("@")[0]}</strong><small>{u.email}</small></td>
                               <td><span className="pill">{u.country}</span></td>
+                              <td><strong style={{ color: "var(--lime)" }}>Lv. {u.level || 1}</strong></td>
+                              <td><small>{((u.play_time_seconds || 0) / 3600).toFixed(1)}h</small></td>
+                              <td>{num(u.total_coins_bought || 0)} xu</td>
                               <td>{num(u.available || 0)} xu</td>
                               <td>{num(u.held || 0)} xu</td>
                               <td><span className={`enabled ${!u.banned ? "on" : ""}`}>{u.banned ? "Tạm khóa" : "Hoạt động"}</span></td>
                               <td>
-                                <button className="text-button" onClick={() => setDecision({ type: "user", item: u })} disabled={busy}>
-                                  {u.banned ? "Mở khóa" : "Tạm khóa"}
-                                </button>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button className="text-button" onClick={() => setAdjustUserModal(u)} title="Cộng giờ chơi hoặc xu nạp để test tăng cấp">
+                                    + Cấp/Xu
+                                  </button>
+                                  <button className="text-button" onClick={() => setDecision({ type: "user", item: u })} disabled={busy}>
+                                    {u.banned ? "Mở khóa" : "Tạm khóa"}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -749,6 +900,130 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
           }}
           busy={busy}
         />
+      )}
+
+      {showCreateGiftcode && (
+        <Modal title="Tạo mã Giftcode mới" close={() => setShowCreateGiftcode(false)}>
+          <div style={{ padding: "16px 20px" }}>
+            <div className="form-group">
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>MÃ GIFTCODE</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="VD: JINQP2026..."
+                  value={giftcodeForm.code}
+                  onChange={e => setGiftcodeForm({ ...giftcodeForm, code: e.target.value.toUpperCase() })}
+                  style={{ flex: 1, padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)", fontWeight: 700 }}
+                />
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  onClick={() => setGiftcodeForm({ ...giftcodeForm, code: "JINQP" + Math.floor(1000 + Math.random() * 9000) })}
+                >
+                  Ngẫu nhiên
+                </button>
+              </div>
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>SỐ XU THƯỞNG (COIN)</label>
+              <input
+                type="number"
+                min="10"
+                step="100"
+                value={giftcodeForm.coins}
+                onChange={e => setGiftcodeForm({ ...giftcodeForm, coins: Math.max(10, parseInt(e.target.value) || 0) })}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>SỐ LƯỢT DÙNG TỐI ĐA (TOÀN HỆ THỐNG)</label>
+              <input
+                type="number"
+                min="1"
+                value={giftcodeForm.maxUses}
+                onChange={e => setGiftcodeForm({ ...giftcodeForm, maxUses: Math.max(1, parseInt(e.target.value) || 1) })}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>THỜI HẠN SỬ DỤNG (SỐ NGÀY, 0 = VÔ THỜI HẠN)</label>
+              <input
+                type="number"
+                min="0"
+                value={giftcodeForm.expiresDays}
+                onChange={e => setGiftcodeForm({ ...giftcodeForm, expiresDays: Math.max(0, parseInt(e.target.value) || 0) })}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
+            <div className="modal-actions" style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn secondary" onClick={() => setShowCreateGiftcode(false)}>Hủy</button>
+              <button
+                className="btn lime"
+                disabled={busy || !giftcodeForm.code.trim()}
+                onClick={async () => {
+                  const ok = await run("giftcode.create", giftcodeForm, "Đã tạo mã Giftcode thành công!");
+                  if (ok) {
+                    setShowCreateGiftcode(false);
+                    setGiftcodeForm({ code: "", coins: 1000, maxUses: 100, expiresDays: 30 });
+                  }
+                }}
+              >
+                Tạo mã Giftcode
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {adjustUserModal && (
+        <Modal title={`Điều chỉnh Cấp độ & Giờ chơi: ${adjustUserModal.name}`} close={() => setAdjustUserModal(null)}>
+          <div style={{ padding: "16px 20px" }}>
+            <p style={{ color: "var(--muted)", marginBottom: 14, fontSize: "0.88rem", lineHeight: 1.5 }}>
+              Quy tắc tăng cấp: Cứ 10h chơi game tăng 1 cấp. Để mở mốc cấp 10, 20, 30, 50, 100... người dùng cần nạp đủ số xu (Cấp × 1.000 xu).
+            </p>
+            <div className="form-group">
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>CỘNG THÊM GIỜ CHƠI (GIỜ)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={adjustHours}
+                onChange={e => setAdjustHours(parseFloat(e.target.value) || 0)}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+              <small style={{ color: "var(--muted)", display: "block", marginTop: 4 }}>Nhập 10 để tăng 1 cấp (10h chơi game)</small>
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>CỘNG THÊM XU ĐÃ MUA / NẠP (COIN)</label>
+              <input
+                type="number"
+                min="0"
+                step="1000"
+                value={adjustCoins}
+                onChange={e => setAdjustCoins(parseInt(e.target.value) || 0)}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+              <small style={{ color: "var(--muted)", display: "block", marginTop: 4 }}>Cần 10.000 xu để mở cấp 10; 50.000 xu để mở cấp 50 (Rút Payoneer)</small>
+            </div>
+            <div className="modal-actions" style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn secondary" onClick={() => setAdjustUserModal(null)}>Hủy</button>
+              <button
+                className="btn lime"
+                disabled={busy}
+                onClick={async () => {
+                  const ok = await run("user.adjust_level", {
+                    userId: adjustUserModal.id,
+                    addHours: adjustHours,
+                    addCoins: adjustCoins
+                  }, "Đã cập nhật tiến trình cấp độ người chơi!");
+                  if (ok) setAdjustUserModal(null);
+                }}
+              >
+                Cập nhật cấp & xu
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {edit && (

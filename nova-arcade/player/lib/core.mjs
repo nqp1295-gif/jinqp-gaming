@@ -4,12 +4,12 @@ export const TIERS = { bronze: { name: "Đồng", rank: 1 }, gold: { name: "Vàn
 export const PERIODS = { week: "Tuần", month: "Tháng", year: "Năm" };
 
 export const TOPUP_PACKAGES = [
-  { id: "topup-105", coins: 105, bonus: 0, priceCents: 105, label: "Khởi đầu", tag: "Gói cơ bản" },
-  { id: "topup-265", coins: 265, bonus: 15, priceCents: 250, label: "Phổ thông", tag: "Tiết kiệm 5%" },
-  { id: "topup-535", coins: 535, bonus: 35, priceCents: 500, label: "Hấp dẫn", tag: "Tặng 35 xu" },
-  { id: "topup-750", coins: 750, bonus: 60, priceCents: 700, label: "Được chọn nhiều", tag: "Phổ biến nhất", popular: true },
-  { id: "topup-1350", coins: 1350, bonus: 150, priceCents: 1200, label: "Ưu đãi lớn", tag: "Bán chạy" },
-  { id: "topup-2750", coins: 2750, bonus: 350, priceCents: 2400, label: "Giá trị nhất", tag: "Tặng 350 xu", best: true },
+  { id: "topup-1000", coins: 1000, bonus: 0, priceCents: 100, label: "Khởi đầu", tag: "1.000 xu" },
+  { id: "topup-5000", coins: 5000, bonus: 500, priceCents: 500, label: "Tập sự", tag: "Tặng 500 xu" },
+  { id: "topup-10000", coins: 10000, bonus: 1500, priceCents: 1000, label: "Cao thủ (Mở Cấp 10)", tag: "Đột phá Cấp 10", popular: true },
+  { id: "topup-20000", coins: 20000, bonus: 3500, priceCents: 2000, label: "Chiến binh (Mở Cấp 20)", tag: "Đột phá Cấp 20" },
+  { id: "topup-50000", coins: 50000, bonus: 10000, priceCents: 5000, label: "VIP Đặc quyền (Mở Cấp 50)", tag: "Mở Rút tiền Payoneer", best: true },
+  { id: "topup-100000", coins: 100000, bonus: 25000, priceCents: 10000, label: "Huyền thoại (Mở Cấp 100)", tag: "Nâng hạn mức rút $500" },
 ];
 
 export const COUNTRIES = [
@@ -35,7 +35,7 @@ export class AppError extends Error {
 }
 
 const id = () => crypto.randomUUID();
-const stmt = (db, sql, args = []) => db.prepare(sql).bind(...args);
+const stmt = (db, sql, args = []) => db.prepare(sql).bind(...args.map(a => a === undefined ? null : a));
 export const one = (db, sql, args = []) => stmt(db, sql, args).first();
 export const rows = async (db, sql, args = []) => (await stmt(db, sql, args).all()).results;
 
@@ -190,11 +190,52 @@ export async function seed(db) {
       id text PRIMARY KEY, game_id text NOT NULL, user_id text NOT NULL,
       user_name text NOT NULL, rating integer NOT NULL, comment text NOT NULL, created_at integer NOT NULL
     );`,
+    `CREATE TABLE IF NOT EXISTS gift_codes (
+      id text PRIMARY KEY, code text UNIQUE NOT NULL, coins integer NOT NULL,
+      max_uses integer DEFAULT 100 NOT NULL, used_count integer DEFAULT 0 NOT NULL,
+      expires_at integer, active integer DEFAULT 1 NOT NULL, created_at integer NOT NULL
+    );`,
+    `CREATE TABLE IF NOT EXISTS gift_code_redemptions (
+      id text PRIMARY KEY, code text NOT NULL, user_id text NOT NULL,
+      coins integer NOT NULL, created_at integer NOT NULL, UNIQUE(code, user_id)
+    );`,
+    `CREATE TABLE IF NOT EXISTS user_notifications (
+      id text PRIMARY KEY, user_id text NOT NULL, title text NOT NULL,
+      message text NOT NULL, kind text DEFAULT 'system' NOT NULL,
+      read integer DEFAULT 0 NOT NULL, created_at integer NOT NULL
+    );`,
   ];
 
   for (const q of createStatements) {
     try { await db.prepare(q).run(); } catch { /* ignore if already exists */ }
   }
+
+  const alterColumns = [
+    "ALTER TABLE app_users ADD COLUMN password_hash text",
+    "ALTER TABLE app_users ADD COLUMN play_time_seconds integer DEFAULT 0",
+    "ALTER TABLE app_users ADD COLUMN total_coins_bought integer DEFAULT 0",
+    "ALTER TABLE app_users ADD COLUMN level integer DEFAULT 1",
+    "ALTER TABLE app_users ADD COLUMN last_payout_time integer DEFAULT 0"
+  ];
+  for (const ac of alterColumns) {
+    try { await db.prepare(ac).run(); } catch {}
+  }
+
+  // Seed default giftcodes if none exist
+  try {
+    const existingGcs = (await one(db, "SELECT COUNT(*) as n FROM gift_codes"))?.n || 0;
+    if (existingGcs === 0) {
+      const nowSeed = Date.now();
+      const defaultCodes = [
+        ["gc-welcome", "JINQP2026", 1000, 500, 0, null, 1, nowSeed],
+        ["gc-gaming", "GAMINGCENTER", 500, 1000, 0, null, 1, nowSeed],
+        ["gc-vip", "VIPBONUS", 2000, 200, 0, null, 1, nowSeed],
+      ];
+      for (const gc of defaultCodes) {
+        await stmt(db, "INSERT INTO gift_codes (id,code,coins,max_uses,used_count,expires_at,active,created_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING", gc).run();
+      }
+    }
+  } catch {}
 
   const ver = (await one(db, "SELECT value FROM app_settings WHERE key='seed_version'"))?.value;
   if (ver === "2.0") return;
@@ -287,14 +328,189 @@ export async function seed(db) {
 }
 
 export async function ensureUser(db, user, now = Date.now()) {
-  if (!user?.userId) throw new AppError("Vui lòng đăng nhập để tiếp tục.", 401, "SIGN_IN_REQUIRED");
+  const uid = user?.userId || user?.id;
+  if (!uid) throw new AppError("Vui lòng đăng nhập để tiếp tục.", 401, "SIGN_IN_REQUIRED");
+  const userName = user.displayName || user.name || (user.email ? user.email.split("@")[0] : "Người chơi");
   await db.batch([
-    stmt(db, "INSERT INTO app_users (id,name,email,country,banned,created_at) VALUES (?,?,?,'VN',0,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,email=excluded.email", [user.userId, user.displayName, user.email, now]),
-    ...["available", "held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'COIN',0) ON CONFLICT(id) DO NOTHING", [acc(user.userId, k), user.userId, k])),
+    stmt(db, "INSERT INTO app_users (id,name,email,country,banned,created_at,play_time_seconds,total_coins_bought,level) VALUES (?,?,?,'VN',0,?,0,0,1) ON CONFLICT(id) DO UPDATE SET name=COALESCE(excluded.name, app_users.name),email=COALESCE(excluded.email, app_users.email)", [uid, userName, user.email || null, now]),
+    ...["available", "held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'COIN',0) ON CONFLICT(id) DO NOTHING", [acc(uid, k), uid, k])),
   ]);
-  const u = await one(db, "SELECT * FROM app_users WHERE id=?", [user.userId]);
+  const u = await one(db, "SELECT * FROM app_users WHERE id=?", [uid]);
   if (u.banned) throw new AppError("Tài khoản đang tạm khóa. Vui lòng liên hệ hỗ trợ.", 403);
   return u;
+}
+
+async function hashPassword(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`jinqp-salt:${str}`));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+export function computeLevelInfo(playTimeSeconds = 0, totalCoinsBought = 0) {
+  const safeSeconds = Math.max(0, Number(playTimeSeconds) || 0);
+  const safeCoins = Math.max(0, Number(totalCoinsBought) || 0);
+
+  // 1 level per 10 hours of play = 36000 seconds
+  const hoursPlayed = safeSeconds / 3600;
+  const rawLevel = Math.max(1, Math.floor(safeSeconds / 36000) + 1);
+  const progressPercent = Math.min(100, Math.floor(((safeSeconds % 36000) / 36000) * 100));
+
+  let effectiveLevel = 1;
+  let blockedAtCheckpoint = null;
+  let neededCoins = 0;
+
+  for (let lvl = 2; lvl <= rawLevel; lvl++) {
+    if (lvl % 10 === 0) {
+      const required = lvl * 1000;
+      if (safeCoins < required) {
+        blockedAtCheckpoint = lvl;
+        neededCoins = required - safeCoins;
+        break;
+      }
+    }
+    effectiveLevel = lvl;
+  }
+
+  return {
+    level: effectiveLevel,
+    rawLevel,
+    hoursPlayed: Number(hoursPlayed.toFixed(1)),
+    progressPercent: blockedAtCheckpoint ? 100 : progressPercent,
+    blockedAtCheckpoint,
+    neededCoins,
+    totalCoinsBought: safeCoins,
+    canWithdraw: effectiveLevel >= 50,
+    maxWithdrawalUsd: effectiveLevel >= 100 ? 500 : (effectiveLevel >= 50 ? 50 : 0)
+  };
+}
+
+export async function checkAndProcessLevelUp(db, userId, now = Date.now()) {
+  const u = await one(db, "SELECT * FROM app_users WHERE id = ?", [userId]);
+  if (!u) return null;
+
+  const lvlInfo = computeLevelInfo(u.play_time_seconds || 0, u.total_coins_bought || 0);
+  const oldLevel = u.level || 1;
+  const newLevel = lvlInfo.level;
+
+  if (newLevel !== oldLevel) {
+    await stmt(db, "UPDATE app_users SET level = ? WHERE id = ?", [newLevel, userId]).run();
+
+    // Send notifications for milestones of 10
+    if (newLevel > oldLevel) {
+      for (let milestone = 10; milestone <= newLevel; milestone += 10) {
+        if (oldLevel < milestone) {
+          let title = `🎉 Chúc mừng bạn đã đạt Cột mốc Cấp ${milestone}!`;
+          let msg = `Bạn đã thăng cấp lên Cấp ${milestone} thành công nhờ chăm chỉ chơi game và đồng hành cùng JINQP Gaming Center!`;
+
+          if (milestone === 50) {
+            title = `🌟 ĐẶC QUYỀN MỞ KHÓA: ĐẠT CẤP ${milestone}!`;
+            msg = `Chúc mừng bạn đã đạt Cột mốc Cấp 50! Bạn đã mở khóa tính năng đặc quyền: Rút tiền thưởng về ví Payoneer (Hạn mức: tối đa 50 USD / lần rút, mỗi ngày rút 1 lần)!`;
+          } else if (milestone === 100) {
+            title = `👑 ĐỈNH CAO DANH VỌNG: ĐẠT CẤP ${milestone}!`;
+            msg = `Chúc mừng bạn đã đạt Cột mốc Đỉnh cao Cấp 100! Hạn mức Rút tiền về ví Payoneer của bạn đã được nâng cấp lên tối đa 500 USD / lần rút (mỗi ngày rút 1 lần)!`;
+          }
+
+          const notifId = id();
+          try {
+            await stmt(db, `INSERT INTO user_notifications (id, user_id, title, message, kind, read, created_at) VALUES (?, ?, ?, ?, 'level_up', 0, ?)`, [
+              notifId, userId, title, msg, now
+            ]).run();
+          } catch {}
+        }
+      }
+    }
+  }
+
+  return lvlInfo;
+}
+
+export async function addPlayTime(db, userId, seconds, now = Date.now()) {
+  const s = Math.min(Math.max(1, Math.floor(seconds || 0)), 300);
+  await stmt(db, "UPDATE app_users SET play_time_seconds = play_time_seconds + ? WHERE id = ?", [s, userId]).run();
+  return checkAndProcessLevelUp(db, userId, now);
+}
+
+export async function redeemGiftCode(db, userId, codeStr, now = Date.now()) {
+  const code = str(codeStr, 2, 50, "Mã quà tặng").trim().toUpperCase();
+  const gc = await one(db, "SELECT * FROM gift_codes WHERE code=? AND active=1", [code]);
+  if (!gc) throw new AppError("Mã quà tặng không hợp lệ hoặc đã bị khóa.", 404);
+  if (gc.expires_at && gc.expires_at < now) throw new AppError("Mã quà tặng đã hết thời gian hiệu lực.", 400);
+  if (gc.used_count >= gc.max_uses) throw new AppError("Mã quà tặng đã hết lượt sử dụng.", 400);
+
+  const existing = await one(db, "SELECT id FROM gift_code_redemptions WHERE code=? AND user_id=?", [code, userId]);
+  if (existing) throw new AppError("Bạn đã nhận mã quà tặng này rồi.", 400);
+
+  const redId = id();
+  try {
+    await db.batch([
+      stmt(db, "INSERT INTO gift_code_redemptions (id, code, user_id, coins, created_at) VALUES (?, ?, ?, ?, ?)", [redId, code, userId, gc.coins, now]),
+      stmt(db, "UPDATE gift_codes SET used_count = used_count + 1 WHERE id = ?", [gc.id]),
+      stmt(db, "UPDATE wallet_accounts SET balance = balance + ? WHERE id = ?", [gc.coins, acc(userId)]),
+      ...posting(db, `giftcode:${redId}`, "giftcode_reward", userId, "COIN", [
+        [acc(userId), gc.coins],
+        ["system:rewards", -gc.coins]
+      ], now),
+      auditStatement(db, userId, "giftcode.redeemed", gc.code, `Nhận ${gc.coins} xu từ mã quà tặng ${gc.code}`, now),
+    ]);
+  } catch (e) {
+    const dup = await one(db, "SELECT id FROM gift_code_redemptions WHERE code=? AND user_id=?", [code, userId]);
+    if (dup) throw new AppError("Bạn đã nhận mã quà tặng này rồi.", 400);
+    throw e;
+  }
+
+  try {
+    await stmt(db, `INSERT INTO user_notifications (id, user_id, title, message, kind, read, created_at) VALUES (?, ?, ?, ?, 'giftcode', 0, ?)`, [
+      id(), userId, `🎁 Nhận thành công ${gc.coins} xu từ mã quà tặng!`, `Mã quà tặng [${gc.code}] đã được cộng ${gc.coins} xu vào số dư khả dụng của bạn.`, now
+    ]).run();
+  } catch {}
+
+  return { success: true, coins: gc.coins, code: gc.code };
+}
+
+export async function signUpUser(db, input, now = Date.now()) {
+  const name = str(input.displayName || input.name, 2, 40, "Tên hiển thị").trim();
+  const email = str(input.email, 5, 80, "Email").trim().toLowerCase();
+  const password = str(input.password, 4, 100, "Mật khẩu");
+  const country = (input.country || "VN").slice(0, 2).toUpperCase();
+
+  const existing = await one(db, "SELECT id FROM app_users WHERE email = ?", [email]);
+  if (existing) throw new AppError("Email này đã được sử dụng. Vui lòng đăng nhập.", 400);
+
+  const userId = `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  const passwordHash = await hashPassword(password);
+
+  await db.batch([
+    stmt(db, "INSERT INTO app_users (id, name, email, password_hash, country, banned, created_at, play_time_seconds, total_coins_bought, level) VALUES (?, ?, ?, ?, ?, 0, ?, 0, 0, 1)", [
+      userId, name, email, passwordHash, country, now
+    ]),
+    ...["available", "held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'COIN',0) ON CONFLICT(id) DO NOTHING", [acc(userId, k), userId, k])),
+  ]);
+
+  try {
+    await stmt(db, `INSERT INTO user_notifications (id, user_id, title, message, kind, read, created_at) VALUES (?, ?, ?, ?, 'welcome', 0, ?)`, [
+      id(), userId, "Chào mừng đến với JINQP Gaming Center!", "Tài khoản của bạn đã được khởi tạo thành công. Hãy khám phá kho game, tham gia giải đấu và tích lũy cấp độ nhé!", now
+    ]).run();
+  } catch {}
+
+  const u = await one(db, "SELECT * FROM app_users WHERE id = ?", [userId]);
+  return { id: u.id, name: u.name, email: u.email, country: u.country, level: u.level };
+}
+
+export async function signInUser(db, input) {
+  const emailOrName = str(input.email || input.account, 2, 80, "Tài khoản").trim();
+  const password = str(input.password, 1, 100, "Mật khẩu");
+
+  const u = await one(db, "SELECT * FROM app_users WHERE email = ? OR name = ? OR id = ?", [emailOrName.toLowerCase(), emailOrName, emailOrName]);
+  if (!u) throw new AppError("Tài khoản hoặc mật khẩu không chính xác.", 401);
+  if (u.banned) throw new AppError("Tài khoản đang bị tạm khóa. Vui lòng liên hệ hỗ trợ.", 403);
+
+  if (u.password_hash) {
+    const inputHash = await hashPassword(password);
+    if (u.password_hash !== inputHash) {
+      throw new AppError("Tài khoản hoặc mật khẩu không chính xác.", 401);
+    }
+  }
+
+  return { id: u.id, name: u.name, email: u.email, country: u.country, level: u.level };
 }
 
 export async function membership(db, userId, now = Date.now()) {
@@ -328,7 +544,10 @@ export async function bootstrap(db, user) {
   if (!user) return result;
 
   const u = await ensureUser(db, user), now = Date.now();
+  const levelInfo = await checkAndProcessLevelUp(db, u.id, now);
   const userAccounts = await rows(db, "SELECT kind,balance FROM wallet_accounts WHERE user_id=?", [u.id]);
+  const userNotifications = await rows(db, "SELECT * FROM user_notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50", [u.id]);
+  const unreadCount = (await one(db, "SELECT COUNT(*) as n FROM user_notifications WHERE user_id=? AND read=0", [u.id]))?.n || 0;
   const userTransfers = await rows(db, `
     SELECT t.*, u_from.name AS sender_name, u_to.name AS recipient_name
     FROM wallet_transfers t
@@ -343,6 +562,8 @@ export async function bootstrap(db, user) {
     name: u.name,
     email: u.email,
     country: u.country,
+    level: levelInfo?.level || u.level || 1,
+    levelInfo: levelInfo || computeLevelInfo(u.play_time_seconds, u.total_coins_bought),
     membership: await membership(db, u.id),
     accounts: userAccounts,
     earnedToday: (await one(db, "SELECT total FROM daily_rewards WHERE id=?", [`${u.id}:${day(now)}`]))?.total || 0,
@@ -350,6 +571,8 @@ export async function bootstrap(db, user) {
     orders: await rows(db, "SELECT id,plan_id,amount_cents,status,method,created_at,expires_at,snapshot_json FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 30", [u.id]),
     payouts: await rows(db, "SELECT * FROM payouts WHERE user_id=? ORDER BY created_at DESC LIMIT 30", [u.id]),
     transfers: userTransfers,
+    notifications: userNotifications,
+    unreadNotificationsCount: unreadCount,
     history: await rows(db, `
       SELECT j.id,j.reason,j.created_at,l.delta
       FROM journal_transactions j
@@ -456,8 +679,10 @@ export async function simulatePayment(db, userId, orderId, now = Date.now(), act
         stmt(db, "UPDATE orders SET status='paid',settled_at=?,external_ref=? WHERE id=? AND status='pending'", [
           now, `sandbox-topup:${o.id}`, o.id
         ]),
+        stmt(db, "UPDATE app_users SET total_coins_bought=total_coins_bought+? WHERE id=?", [totalCoins, userId]),
         auditStatement(db, actor, "sandbox.topup.confirmed", o.id, `Nạp ${totalCoins} xu thử nghiệm thành công`, now),
       ]);
+      await checkAndProcessLevelUp(db, userId, now);
     } catch (e) {
       const cur = await one(db, "SELECT * FROM orders WHERE id=?", [o.id]);
       if (cur?.status !== "paid") throw e;
@@ -1064,6 +1289,26 @@ export async function createPayout(db, userId, input, now = Date.now()) {
 
   if (!["qr", "link"].includes(method)) throw new AppError("Phương thức không hợp lệ.");
 
+  const u = await one(db, "SELECT * FROM app_users WHERE id=?", [userId]);
+  if (!u) throw new AppError("Người dùng không tồn tại.", 404);
+  const lvlInfo = computeLevelInfo(u.play_time_seconds || 0, u.total_coins_bought || 0);
+
+  if (lvlInfo.level < 50) {
+    throw new AppError("Tính năng rút tiền chưa khả dụng cho tài khoản này.", 403);
+  }
+
+  const maxUsd = lvlInfo.level >= 100 ? 500 : 50;
+  const maxCents = maxUsd * 100;
+  if (cents > maxCents) {
+    throw new AppError(`Hạn mức rút tối đa hiện tại là $${maxUsd} USD cho mỗi giao dịch.`, 400);
+  }
+
+  const dayAgo = now - 24 * 3600 * 1000;
+  const todayPayout = await one(db, "SELECT COUNT(*) as n FROM payouts WHERE user_id=? AND created_at>? AND status != 'rejected'", [userId, dayAgo]);
+  if (todayPayout?.n >= 1) {
+    throw new AppError("Bạn đã thực hiện yêu cầu rút tiền hôm nay. Mỗi ngày chỉ được rút tối đa 1 lần.", 429);
+  }
+
   const old = await one(db, "SELECT * FROM payouts WHERE user_id=? AND request_key=?", [userId, requestKey]);
   if (old) {
     if (old.coins !== coins || old.recipient !== recipient || old.method !== method) {
@@ -1213,6 +1458,7 @@ export async function adminAction(db, actor, action, input = {}) {
         JOIN app_users u ON u.id = t.user_id
         ORDER BY t.created_at DESC LIMIT 100
       `),
+      giftCodes: await rows(db, "SELECT * FROM gift_codes ORDER BY created_at DESC"),
       paymentConfig: parse((await one(db, "SELECT value FROM app_settings WHERE key='payment_config'"))?.value || "{}"),
       stats: {
         plays: totalPlays,
@@ -1332,6 +1578,44 @@ export async function adminAction(db, actor, action, input = {}) {
     return { saved: true };
   }
 
+  if (action === "giftcode.create") {
+    const gcId = id();
+    const code = str(input.code, 2, 50, "Mã Giftcode").trim().toUpperCase();
+    const coins = integer(input.coins, 10, 10000000, "Số xu thưởng");
+    const maxUses = integer(input.maxUses || 100, 1, 10000000, "Số lượt dùng tối đa");
+    const expiresAt = input.expiresDays ? Date.now() + input.expiresDays * 86400000 : null;
+    await stmt(db, `INSERT INTO gift_codes (id, code, coins, max_uses, used_count, expires_at, active, created_at) VALUES (?, ?, ?, ?, 0, ?, 1, ?)`, [
+      gcId, code, coins, maxUses, expiresAt, Date.now()
+    ]).run();
+    return { success: true, id: gcId };
+  }
+
+  if (action === "giftcode.toggle") {
+    await db.batch([
+      stmt(db, "UPDATE gift_codes SET active = CASE WHEN active=1 THEN 0 ELSE 1 END WHERE id=?", [input.id]),
+      auditStatement(db, actor, action, str(input.id, 1, 100, "Mã"), "Đổi trạng thái")
+    ]);
+    return { saved: true };
+  }
+
+  if (action === "giftcode.delete") {
+    await db.batch([
+      stmt(db, "DELETE FROM gift_codes WHERE id=?", [input.id]),
+      auditStatement(db, actor, action, str(input.id, 1, 100, "Mã"), "Xóa mã")
+    ]);
+    return { saved: true };
+  }
+
+  if (action === "user.adjust_level") {
+    const addHours = Number(input.addHours) || 0;
+    const addCoins = Number(input.addCoins) || 0;
+    await stmt(db, "UPDATE app_users SET play_time_seconds = MAX(0, play_time_seconds + ?), total_coins_bought = MAX(0, total_coins_bought + ?) WHERE id=?", [
+      addHours * 3600, addCoins, input.userId
+    ]).run();
+    await checkAndProcessLevelUp(db, input.userId);
+    return { saved: true };
+  }
+
   throw new AppError("Chức năng quản trị không hợp lệ.", 404);
 }
 
@@ -1340,6 +1624,19 @@ export async function adminAction(db, actor, action, input = {}) {
 // -------------------------
 
 export async function playerAction(db, userId, action, input = {}) {
+  if (action === "auth.signup") return signUpUser(db, input);
+  if (action === "auth.signin") return signInUser(db, input);
+  if (action === "giftcode.redeem") return redeemGiftCode(db, userId, input.code);
+  if (action === "game.heartbeat") return addPlayTime(db, userId, input.seconds);
+  if (action === "notification.read") {
+    await stmt(db, "UPDATE user_notifications SET read=1 WHERE id=? AND user_id=?", [input.id, userId]).run();
+    return { success: true };
+  }
+  if (action === "notification.read_all") {
+    await stmt(db, "UPDATE user_notifications SET read=1 WHERE user_id=?", [userId]).run();
+    return { success: true };
+  }
+
   if (action === "order.create") return createOrder(db, userId, input);
   if (action === "order.simulate") return simulatePayment(db, userId, str(input.id, 1, 100, "Đơn"));
   if (action === "transfer.create") return createTransfer(db, userId, input);

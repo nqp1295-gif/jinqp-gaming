@@ -446,3 +446,239 @@
   color: #c5ccdf;
   padding: 8px 10px;
 }
+
+/* =========================================
+   AUTH, LEVEL PROGRESSION, GIFTCODE & INBOX
+   ========================================= */
+
+/* Topbar items */
+.topbar-auth-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(235, 255, 0, 0.15), rgba(0, 240, 255, 0.1));
+  border: 1px solid rgba(235, 255, 0, 0.35);
+  color: #f7ff9e;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.level-badge-pill:hover {
+  background: linear-gradient(135deg, rgba(235, 255, 0, 0.25), rgba(0, 240, 255, 0.2));
+  transform: translateY(-1px);
+  border-color: #ebff00;
+}
+.level-badge-pill .level-pct {
+  font-size: 11px;
+  color: #9fe9ff;
+  font-weight: 500;
+}
+
+.giftcode-btn-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 75, 125, 0.12);
+  border: 1px solid rgba(255, 75, 125, 0.3);
+  color: #ff85a9;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.giftcode-btn-top:hover {
+  background: rgba(255, 75, 125, 0.22);
+  border-color: #ff4b7d;
+  color: #fff;
+}
+
+.notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #ff4343;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #0b0e17;
+  animation: pulseBadge 2s infinite;
+}
+@keyframes pulseBadge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* Modals */
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #1f273d;
+  padding-bottom: 10px;
+}
+.auth-tab-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8b94ac;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-tab-btn.active {
+  background: #182033;
+  color: #fff;
+  border-color: #2b395a;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #a4adc9;
+  font-weight: 600;
+}
+.auth-form input {
+  padding: 10px 12px;
+  background: #101524;
+  border: 1px solid #232c45;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.auth-form input:focus {
+  border-color: var(--lime);
+}
+
+.level-card-main {
+  background: radial-gradient(circle at top left, #1c263f, #0d121f);
+  border: 1px solid #2b3859;
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.level-card-main .level-num {
+  font-size: 42px;
+  font-weight: 900;
+  color: #ebff00;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(235, 255, 0, 0.4);
+}
+.level-progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #161e31;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 14px 0 8px 0;
+  border: 1px solid #232c43;
+}
+.level-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f0ff, #ebff00);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.level-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.level-stat-box {
+  background: #101524;
+  border: 1px solid #1f273d;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.level-stat-box span {
+  font-size: 11px;
+  color: #8b94ac;
+  display: block;
+  margin-bottom: 4px;
+}
+.level-stat-box strong {
+  font-size: 16px;
+  color: #fff;
+}
+
+.inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.inbox-item {
+  background: #121829;
+  border: 1px solid #1f283f;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.inbox-item.unread {
+  border-color: #3b5080;
+  background: #151d33;
+}
+.inbox-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.inbox-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inbox-item-time {
+  font-size: 11px;
+  color: #7b859e;
+}
+.inbox-item-msg {
+  font-size: 12px;
+  color: #b7bfd6;
+  line-height: 1.5;
+}
+

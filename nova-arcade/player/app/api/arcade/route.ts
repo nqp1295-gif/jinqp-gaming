@@ -4,8 +4,20 @@ import { AppError, bootstrap, ensureUser, playerAction, seed } from "../../../li
 export const dynamic = "force-dynamic";
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 function database() { if (!env.DB) throw new AppError("Dữ liệu đang được chuẩn bị. Vui lòng thử lại.",503); return env.DB; }
-export async function GET() {
-  try { return json(await bootstrap(database(),await getChatGPTUser())); }
+export async function GET(request: Request) {
+  try {
+    const customUserHeader = request.headers.get("x-jinqp-user");
+    let user = null;
+    if (customUserHeader) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(customUserHeader));
+        const uid = parsed?.userId || parsed?.id;
+        if (uid && parsed?.email) user = { ...parsed, userId: uid };
+      } catch {}
+    }
+    if (!user) user = await getChatGPTUser();
+    return json(await bootstrap(database(), user));
+  }
   catch(e) { return failure(e); }
 }
 function isAllowedOrigin(originHeader: string | null, requestUrl: string): boolean {
@@ -28,8 +40,29 @@ export async function POST(request: Request) {
     if (!isAllowedOrigin(request.headers.get("origin"), request.url) || !request.headers.get("content-type")?.startsWith("application/json")) throw new AppError("Yêu cầu không được phép.",403);
     const raw = await request.text(); if (raw.length > 65536) throw new AppError("Yêu cầu quá lớn.",413);
     let body; try { body = JSON.parse(raw); } catch { throw new AppError("Dữ liệu không hợp lệ."); }
-    const db=database();await seed(db);const u=await ensureUser(db,await getChatGPTUser());
-    return json(await playerAction(db,u.id,body.action,body.input || {}));
-  }catch(e){return failure(e);}
+    const db = database();
+    await seed(db);
+
+    // Public auth actions don't require pre-existing user session
+    if (body.action === "auth.signup" || body.action === "auth.signin") {
+      const res = await playerAction(db, "", body.action, body.input || {});
+      return json(res);
+    }
+
+    const customUserHeader = request.headers.get("x-jinqp-user");
+    let user = null;
+    if (customUserHeader) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(customUserHeader));
+        const uid = parsed?.userId || parsed?.id;
+        if (uid && parsed?.email) user = { ...parsed, userId: uid };
+      } catch {}
+    }
+    if (!user) user = await getChatGPTUser();
+    if (!user) throw new AppError("Vui lòng đăng nhập để tiếp tục.", 401, "SIGN_IN_REQUIRED");
+
+    const u = await ensureUser(db, user);
+    return json(await playerAction(db, u.id, body.action, body.input || {}));
+  } catch(e) { return failure(e); }
 }
 function failure(e: unknown) { if(e instanceof AppError)return json({error:e.message,code:e.code},e.status);console.error("arcade_request_failed", e instanceof Error ? e.message.slice(0,240) : "unknown");return json({error:"Chưa thể xử lý yêu cầu. Vui lòng thử lại."},500); }

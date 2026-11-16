@@ -38,13 +38,24 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
     };
   }
 
-  // Fallback for standalone / Cloudflare Tunnel / local deployment
-  return {
-    userId: "player_jinqp",
-    displayName: "JINQP Player",
-    email: "player@chiprin.com",
-    fullName: "JINQP Player",
-  };
+  // Check custom cookie or header
+  const cookie = requestHeaders.get("cookie") || "";
+  const match = cookie.match(/jinqp_user=([^;]+)/);
+  if (match) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(match[1]));
+      if (decoded?.userId && decoded?.email) {
+        return {
+          userId: decoded.userId,
+          displayName: decoded.displayName || decoded.name || decoded.email,
+          email: decoded.email,
+          fullName: decoded.displayName || null,
+        };
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 export async function requireChatGPTUser(

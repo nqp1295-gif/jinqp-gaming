@@ -6,7 +6,8 @@ import {
   Clock3, Bell, ChevronRight, HelpCircle, LogOut, Coins, Copy, RefreshCw,
   Send, Link2, QrCode, CheckCircle2, Menu, LoaderCircle, CircleAlert,
   Trophy, Leaf, Moon, Sun, Flame, Flower2, Rocket, Diamond, Maximize2,
-  Minimize2, Star, Users, ArrowDownLeft, ShieldCheck, Tag, Globe, Settings, Volume2, VolumeX, ExternalLink
+  Minimize2, Star, Users, ArrowDownLeft, ShieldCheck, Tag, Globe, Settings, Volume2, VolumeX, ExternalLink,
+  Gift, Mail, User, Lock, Award, KeyRound, LogIn, UserPlus
 } from "lucide-react";
 import QRCode from "qrcode";
 import {
@@ -93,10 +94,43 @@ const statusNames: Record<string, string> = {
   completed: "Thành công", winner: "Thắng giải"
 };
 
+function getAuthHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem("jinqp_user");
+    if (raw) return { "x-jinqp-user": encodeURIComponent(raw) };
+  } catch {}
+  return {};
+}
+
+let activeFetchPromise: Promise<any> | null = null;
+async function fetchArcadeData(): Promise<any> {
+  if (activeFetchPromise) return activeFetchPromise;
+  activeFetchPromise = (async () => {
+    try {
+      const r = await fetch("/api/arcade", {
+        cache: "no-store",
+        headers: {
+          ...getAuthHeader()
+        }
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Không thể tải dữ liệu.");
+      return d;
+    } finally {
+      activeFetchPromise = null;
+    }
+  })();
+  return activeFetchPromise;
+}
+
 async function action(name: string, input: unknown = {}) {
   const r = await fetch("/api/arcade", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader()
+    },
     body: JSON.stringify({ action: name, input })
   });
   const d = await r.json();
@@ -163,6 +197,12 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
   const [bgmEnabled, setBgEnabled] = useState(false);
   const [currencyMode, setCurrencyMode] = useState<"vnd" | "usd">("vnd");
 
+  // New features: Auth, Giftcodes, Levels, Inbox
+  const [authModal, setAuthModal] = useState<"login" | "signup" | null>(null);
+  const [showGiftcodeModal, setShowGiftcodeModal] = useState(false);
+  const [showLevelModal, setShowLevelModal] = useState(false);
+  const [showInboxModal, setShowInboxModal] = useState(false);
+
   const t = (key: TranslationKey) => getTranslation(lang, key);
 
   const changeLang = (l: Locale) => {
@@ -176,12 +216,121 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
   const searchRef = useRef<HTMLInputElement>(null);
 
   const reload = async () => {
-    const r = await fetch("/api/arcade", { cache: "no-store" });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error);
-    setData(d);
-    setError("");
-    return d;
+    try {
+      const d = await fetchArcadeData();
+      setData(d);
+      setError("");
+      return d;
+    } catch (e: any) {
+      setError(e.message || "Không thể tải dữ liệu.");
+      throw e;
+    }
+  };
+
+  // Synchronize URL Hash with pages, modals, and games (Router)
+  const syncHashToState = () => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#\/?/, "");
+    if (!hash) return;
+    const parts = hash.split("/");
+    const root = parts[0];
+    const subId = parts[1];
+
+    if (root === "login") {
+      setAuthModal("login");
+    } else if (root === "signup") {
+      setAuthModal("signup");
+    } else if (root === "giftcode") {
+      setShowGiftcodeModal(true);
+    } else if (root === "level") {
+      setShowLevelModal(true);
+    } else if (root === "inbox") {
+      setShowInboxModal(true);
+    } else if (root === "game" && subId && data?.games) {
+      const g = data.games.find(x => x.id === subId);
+      if (g) setSelectedGame(g);
+    } else if (root === "tournaments" && subId && data?.tournaments) {
+      setPage("tournaments");
+      const tr = data.tournaments.find(x => x.id === subId);
+      if (tr) {
+        setActiveTournament(tr);
+        const g = data?.games.find(x => x.id === tr.game_id);
+        if (g) setSelectedGame(g);
+      }
+    } else if (["explore", "tournaments", "favorites", "wallet", "membership", "settings", "help"].includes(root)) {
+      setPage(root);
+      if (root !== "tournaments") setActiveTournament(null);
+    }
+  };
+
+  useEffect(() => {
+    const onHashChange = () => syncHashToState();
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [data]);
+
+  useEffect(() => {
+    if (data) syncHashToState();
+  }, [data]);
+
+  // 30s Game Heartbeat: records gameplay time for level progression
+  useEffect(() => {
+    if (!selectedGame || !data?.user) return;
+    const timer = setInterval(async () => {
+      try {
+        const lvlRes = await action("game.heartbeat", { seconds: 30 });
+        if (lvlRes && data?.user) {
+          setData(prev => {
+            if (!prev || !prev.user) return prev;
+            return {
+              ...prev,
+              user: {
+                ...prev.user,
+                level: lvlRes.level,
+                levelInfo: lvlRes
+              }
+            };
+          });
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [selectedGame, !!data?.user]);
+
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthModal(mode);
+    window.location.hash = `#/${mode}`;
+  };
+
+  const closeAuth = () => {
+    setAuthModal(null);
+    window.location.hash = `#/${page}`;
+  };
+
+  const handleLogout = async () => {
+    try {
+      localStorage.removeItem("jinqp_user");
+    } catch {}
+    setToast("Đã đăng xuất tài khoản.");
+    await reload();
+  };
+
+  const openGame = (g: Game) => {
+    setSelectedGame(g);
+    window.location.hash = `#/game/${g.id}`;
+  };
+
+  const closeGame = () => {
+    setSelectedGame(null);
+    setActiveTournament(null);
+    window.location.hash = `#/${page}`;
+  };
+
+  const openTournament = (t: Tournament) => {
+    setActiveTournament(t);
+    const g = data?.games.find(x => x.id === t.game_id);
+    if (g) setSelectedGame(g);
+    window.location.hash = `#/tournaments/${t.id}`;
   };
 
   useEffect(() => {
@@ -236,12 +385,13 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
     setPage(p);
     setMobileMenu(false);
     setQuery("");
+    window.location.hash = `#/${p}`;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openRefill = () => {
-    if (!viewer) {
-      window.location.href = "/signin-with-chatgpt?return_to=/";
+    if (!viewer && !data?.user) {
+      openAuth("login");
       return;
     }
     setShowRefill(true);
@@ -258,8 +408,8 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
   };
 
   const buy = (p: Plan) => {
-    if (!viewer) {
-      window.location.href = "/signin-with-chatgpt?return_to=/";
+    if (!viewer && !data?.user) {
+      openAuth("login");
       return;
     }
     setCheckout(p);
@@ -292,8 +442,9 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
 
   const favorites = data?.user?.favorites || [];
   const favorite = async (g: Game) => {
-    if (!viewer) {
+    if (!viewer && !data?.user) {
       setToast("Đăng nhập để lưu game yêu thích.");
+      openAuth("login");
       return;
     }
     try {
@@ -356,15 +507,29 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
           <button className={`nav-item ${page === "settings" ? "active" : ""}`} onClick={() => navigate("settings")}><Settings size={19} />{t("navSettings")}</button>
           <button className={`nav-item ${page === "help" ? "active" : ""}`} onClick={() => navigate("help")}><HelpCircle size={19} />{t("helpCenter")}</button>
           <div className="profile">
-            <span className="avatar">{viewer?.name.slice(0, 1).toUpperCase() || "J"}</span>
+            <span className="avatar">{(data?.user?.name || viewer?.name || "J").slice(0, 1).toUpperCase()}</span>
             <div>
-              <strong>{viewer?.name.split("@")[0] || t("guestPlayer")}</strong>
-              <span>{member ? tierNames[member.terms.tier] + " · Thành viên" : t("welcomeToJinqp")}</span>
+              <strong>{data?.user?.name || data?.user?.email?.split("@")[0] || viewer?.name?.split("@")[0] || t("guestPlayer")}</strong>
+              <span>{data?.user ? `Lv. ${data.user.level || 1} · ${member ? tierNames[member.terms.tier] : "Người chơi"}` : t("welcomeToJinqp")}</span>
             </div>
-            {viewer ? (
-              <a href="/signout-with-chatgpt?return_to=/" target="_top" title="Đăng xuất"><LogOut size={17} /></a>
+            {data?.user || viewer ? (
+              <button
+                className="icon-button"
+                onClick={handleLogout}
+                title="Đăng xuất"
+                style={{ background: "none", border: "none", color: "#8b94ac", cursor: "pointer", padding: "6px" }}
+              >
+                <LogOut size={17} />
+              </button>
             ) : (
-              <a href="/signin-with-chatgpt?return_to=/" target="_top" title="Đăng nhập"><ArrowUpRight size={18} /></a>
+              <button
+                className="icon-button"
+                onClick={() => openAuth("login")}
+                title="Đăng nhập"
+                style={{ background: "none", border: "none", color: "var(--lime)", cursor: "pointer", padding: "6px" }}
+              >
+                <LogIn size={18} />
+              </button>
             )}
           </div>
         </div>
@@ -413,22 +578,71 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
               )}
             </div>
 
-            <span className="test-label"><i />{t("sandboxBadge")}</span>
+            <button
+              className="giftcode-btn-top"
+              onClick={() => {
+                if (!data?.user && !viewer) {
+                  openAuth("login");
+                } else {
+                  setShowGiftcodeModal(true);
+                  window.location.hash = "#/giftcode";
+                }
+              }}
+              title="Nhập mã quà tặng"
+            >
+              <Gift size={15} />
+              <span>Mã quà</span>
+            </button>
+
+            {data?.user && (
+              <button
+                className="level-badge-pill"
+                onClick={() => { setShowLevelModal(true); window.location.hash = "#/level"; }}
+                title="Xem chi tiết cấp độ tài khoản"
+              >
+                <Award size={15} />
+                <span>Lv. {data.user.level || 1}</span>
+                <span className="level-pct">({data.user.levelInfo?.progressPercent || 0}%)</span>
+              </button>
+            )}
+
             <button className="balance-button" onClick={openRefill} title={t("refillBalance")}>
               <Coin /><strong>{number(available)}</strong><span>{t("coins")}</span>
               <span className="balance-plus">+</span>
             </button>
-            <div className="notification-wrap">
-              <button className="icon-button" aria-label="Thông báo" onClick={() => setNotifications(!notifications)}>
-                <Bell size={21} />
-              </button>
-              {notifications && (
-                <div className="notification-pop">
-                  <strong>{t("systemNotice")}</strong>
-                  <p>{t("welcomeNotice")}</p>
-                </div>
-              )}
-            </div>
+
+            {data?.user ? (
+              <>
+                <button
+                  className="icon-button"
+                  style={{ position: "relative" }}
+                  aria-label="Hộp thư"
+                  onClick={() => { setShowInboxModal(true); window.location.hash = "#/inbox"; }}
+                  title="Hộp thư thông báo"
+                >
+                  <Mail size={19} />
+                  {(data.user.unreadNotificationsCount || 0) > 0 && (
+                    <span className="notif-badge">{data.user.unreadNotificationsCount}</span>
+                  )}
+                </button>
+                <button
+                  className="icon-button logout-btn"
+                  onClick={handleLogout}
+                  title="Đăng xuất"
+                >
+                  <LogOut size={18} />
+                </button>
+              </>
+            ) : (
+              <div className="topbar-auth-group">
+                <button className="btn secondary small" onClick={() => openAuth("login")}>
+                  <LogIn size={15} /> Đăng nhập
+                </button>
+                <button className="btn lime small" onClick={() => openAuth("signup")}>
+                  <UserPlus size={15} /> Đăng ký
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -530,7 +744,7 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
                         return (
                           <article className="game-card" key={g.id}>
                             <div className="cover">
-                              <button className="cover-button" onClick={() => setSelectedGame(g)} aria-label={`Xem ${g.title}`}>
+                              <button className="cover-button" onClick={() => openGame(g)} aria-label={`Xem ${g.title}`}>
                                 <img src={`/art/${g.art}.svg`} alt={`Minh họa ${g.title}`} />
                                 <span className="play-overlay"><Play size={24} fill="currentColor" /></span>
                               </button>
@@ -547,10 +761,10 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
                             </div>
                             <div className="game-info">
                               <div>
-                                <h3><button onClick={() => setSelectedGame(g)}>{g.title}</button></h3>
+                                <h3><button onClick={() => openGame(g)}>{g.title}</button></h3>
                                 <span>{g.category} <i /> ★ {avgRating} ({reviews.length || 1})</span>
                               </div>
-                              <button className="game-arrow" onClick={() => setSelectedGame(g)} aria-label={`Mở ${g.title}`}>
+                              <button className="game-arrow" onClick={() => openGame(g)} aria-label={`Mở ${g.title}`}>
                                 <ArrowUpRight size={21} />
                               </button>
                             </div>
@@ -588,15 +802,9 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
               {page === "tournaments" && (
                 <TournamentsPage
                   tournaments={data?.tournaments || []}
-                  signedIn={!!viewer}
+                  signedIn={!!viewer || !!data?.user}
                   available={available}
-                  onPlayGame={(t) => {
-                    const g = data?.games.find(x => x.id === t.game_id);
-                    if (g) {
-                      setActiveTournament(t);
-                      setSelectedGame(g);
-                    }
-                  }}
+                  onPlayGame={(t) => openTournament(t)}
                   reload={reload}
                   notify={setToast}
                   openRefill={openRefill}
@@ -764,12 +972,45 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
           game={selectedGame}
           tournament={activeTournament}
           member={member}
-          signedIn={!!viewer}
+          signedIn={!!viewer || !!data?.user}
           reviews={(data?.reviews || []).filter(r => r.game_id === selectedGame.id)}
-          onClose={() => { setSelectedGame(null); setActiveTournament(null); }}
+          onClose={closeGame}
           onMembership={() => { setSelectedGame(null); navigate("membership"); }}
           reload={reload}
           notify={setToast}
+        />
+      )}
+
+      {authModal && (
+        <AuthModal
+          mode={authModal}
+          onClose={closeAuth}
+          onSuccess={() => reload()}
+          notify={setToast}
+        />
+      )}
+
+      {showGiftcodeModal && (
+        <GiftcodeModal
+          onClose={() => { setShowGiftcodeModal(false); window.location.hash = `#/${page}`; }}
+          reload={reload}
+          notify={setToast}
+        />
+      )}
+
+      {showLevelModal && (
+        <LevelModal
+          user={data?.user}
+          onClose={() => { setShowLevelModal(false); window.location.hash = `#/${page}`; }}
+          openRefill={openRefill}
+        />
+      )}
+
+      {showInboxModal && (
+        <InboxModal
+          user={data?.user}
+          onClose={() => { setShowInboxModal(false); window.location.hash = `#/${page}`; }}
+          reload={reload}
         />
       )}
 
@@ -801,6 +1042,412 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
         </Modal>
       )}
     </div>
+  );
+}
+
+// -------------------------------------------------------------
+// AUTH MODAL (Đăng nhập / Đăng ký người chơi)
+// -------------------------------------------------------------
+
+function AuthModal({
+  mode,
+  onClose,
+  onSuccess,
+  notify
+}: {
+  mode: "login" | "signup";
+  onClose: () => void;
+  onSuccess: (user: any) => void;
+  notify: (msg: string) => void;
+}) {
+  const [tab, setTab] = useState<"login" | "signup">(mode);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email.trim() || !password) {
+      setError("Vui lòng điền đầy đủ email và mật khẩu.");
+      return;
+    }
+
+    if (tab === "signup") {
+      if (password.length < 6) {
+        setError("Mật khẩu phải có ít nhất 6 ký tự.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Mật khẩu xác nhận không khớp.");
+        return;
+      }
+    }
+
+    setBusy(true);
+    try {
+      if (tab === "login") {
+        const res = await action("auth.signin", { email: email.trim(), password });
+        if (res.user) {
+          localStorage.setItem("jinqp_user", JSON.stringify(res.user));
+          notify(`Chào mừng ${res.user.name || res.user.email} đã đăng nhập thành công!`);
+          onSuccess(res.user);
+          onClose();
+        }
+      } else {
+        const res = await action("auth.signup", {
+          name: name.trim() || email.trim().split("@")[0],
+          email: email.trim(),
+          password
+        });
+        if (res.user) {
+          localStorage.setItem("jinqp_user", JSON.stringify(res.user));
+          notify(`Tạo tài khoản thành công! Chào mừng ${res.user.name}!`);
+          onSuccess(res.user);
+          onClose();
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "Thao tác không thành công.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={tab === "login" ? "Đăng nhập tài khoản JINQP" : "Đăng ký thành viên mới"} onClose={onClose}>
+      <div className="checkout-body">
+        <div className="auth-tabs">
+          <button
+            type="button"
+            className={`auth-tab-btn ${tab === "login" ? "active" : ""}`}
+            onClick={() => { setTab("login"); setError(""); }}
+          >
+            <LogIn size={16} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }} />
+            Đăng nhập
+          </button>
+          <button
+            type="button"
+            className={`auth-tab-btn ${tab === "signup" ? "active" : ""}`}
+            onClick={() => { setTab("signup"); setError(""); }}
+          >
+            <UserPlus size={16} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }} />
+            Đăng ký
+          </button>
+        </div>
+
+        {error && (
+          <div className="error-banner" style={{ marginBottom: "14px" }}>
+            <CircleAlert size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          {tab === "signup" && (
+            <label>
+              Họ tên hiển thị:
+              <input
+                type="text"
+                placeholder="Ví dụ: Hoàng Long, Alex..."
+                value={name}
+                onChange={e => setName(e.target.value)}
+                autoFocus
+              />
+            </label>
+          )}
+
+          <label>
+            Địa chỉ Email:
+            <input
+              type="email"
+              required
+              placeholder="ten@vidu.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              autoFocus={tab === "login"}
+            />
+          </label>
+
+          <label>
+            Mật khẩu:
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
+          </label>
+
+          {tab === "signup" && (
+            <label>
+              Xác nhận mật khẩu:
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
+            </label>
+          )}
+
+          <button type="submit" className="btn lime full" disabled={busy} style={{ marginTop: "10px" }}>
+            {busy ? <Spinner /> : tab === "login" ? "Đăng nhập ngay" : "Tạo tài khoản"}
+          </button>
+
+          <p style={{ textAlign: "center", fontSize: "12px", color: "#8b94ac", margin: "6px 0 0 0" }}>
+            {tab === "login" ? "Chưa có tài khoản?" : "Đã có tài khoản?"}{" "}
+            <button
+              type="button"
+              style={{ background: "none", border: "none", color: "var(--lime)", cursor: "pointer", fontWeight: "700" }}
+              onClick={() => { setTab(tab === "login" ? "signup" : "login"); setError(""); }}
+            >
+              {tab === "login" ? "Đăng ký tại đây" : "Đăng nhập ngay"}
+            </button>
+          </p>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+// -------------------------------------------------------------
+// GIFTCODE MODAL (Nhập mã nhận xu)
+// -------------------------------------------------------------
+
+function GiftcodeModal({
+  onClose,
+  reload,
+  notify
+}: {
+  onClose: () => void;
+  reload: () => Promise<any>;
+  notify: (msg: string) => void;
+}) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [reward, setReward] = useState<number | null>(null);
+
+  const handleRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) {
+      setError("Vui lòng nhập mã quà tặng.");
+      return;
+    }
+    setError("");
+    setBusy(true);
+    try {
+      const res = await action("giftcode.redeem", { code: code.trim() });
+      setReward(res.coins);
+      notify(`🎉 Chúc mừng bạn đã nhận +${number(res.coins)} xu!`);
+      await reload();
+    } catch (err: any) {
+      setError(err.message || "Không thể sử dụng mã quà tặng.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="🎁 Nhận xu qua Mã Quà Tặng (Giftcode)" onClose={onClose}>
+      <div className="checkout-body">
+        {reward !== null ? (
+          <div className="success-state" style={{ textAlign: "center", padding: "20px 0" }}>
+            <span style={{ fontSize: "52px", display: "block", marginBottom: "12px" }}>🎉</span>
+            <h2 style={{ color: "#ebff00", marginBottom: "8px" }}>Nhận thưởng thành công!</h2>
+            <p style={{ color: "#c5ccdf", fontSize: "14px", marginBottom: "16px" }}>
+              Tài khoản của bạn đã được cộng <strong>+{number(reward)} xu</strong> vào ví khả dụng.
+            </p>
+            <button className="btn lime full" onClick={onClose}>Tiếp tục chơi game</button>
+          </div>
+        ) : (
+          <form onSubmit={handleRedeem} className="auth-form">
+            <p style={{ fontSize: "13px", color: "#a4adc9", marginBottom: "6px" }}>
+              Nhập mã giftcode tri ân người chơi của JINQP Gaming Center để nhận xu miễn phí vào tài khoản.
+            </p>
+
+            {error && (
+              <div className="error-banner">
+                <CircleAlert size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <label>
+              Mã Giftcode:
+              <input
+                type="text"
+                placeholder="Ví dụ: JINQP2026, GAMINGCENTER..."
+                value={code}
+                onChange={e => setCode(e.target.value.toUpperCase())}
+                style={{ textTransform: "uppercase", letterSpacing: "1px", fontWeight: "700" }}
+                autoFocus
+              />
+            </label>
+
+            <button type="submit" className="btn lime full" disabled={busy} style={{ marginTop: "10px" }}>
+              {busy ? <Spinner /> : "Đổi thưởng ngay"}
+            </button>
+          </form>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+// -------------------------------------------------------------
+// LEVEL MODAL (Tiến trình Cấp độ người dùng)
+// -------------------------------------------------------------
+
+function LevelModal({
+  user,
+  onClose,
+  openRefill
+}: {
+  user: any;
+  onClose: () => void;
+  openRefill: () => void;
+}) {
+  const lvlInfo = user?.levelInfo || {
+    level: user?.level || 1,
+    hoursPlayed: 0,
+    progressPercent: 0,
+    totalCoinsBought: 0,
+    blockedAtCheckpoint: null,
+    neededCoins: 0,
+    canWithdraw: false,
+    maxWithdrawalUsd: 0
+  };
+
+  return (
+    <Modal title="⭐ Tiến trình Cấp độ tài khoản" onClose={onClose}>
+      <div className="checkout-body">
+        <div className="level-card-main">
+          <span style={{ fontSize: "12px", color: "#8b94ac", textTransform: "uppercase", letterSpacing: "1.5px" }}>CẤP ĐỘ HIỆN TẠI</span>
+          <div className="level-num">CẤP {lvlInfo.level}</div>
+
+          <div className="level-progress-bar">
+            <div className="level-progress-fill" style={{ width: `${lvlInfo.progressPercent}%` }} />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#8b94ac", marginTop: "4px" }}>
+            <span>Tiến trình cấp kế tiếp</span>
+            <strong style={{ color: "#ebff00" }}>{lvlInfo.progressPercent}%</strong>
+          </div>
+        </div>
+
+        <div className="level-stats-row">
+          <div className="level-stat-box">
+            <span>Thời gian chơi</span>
+            <strong>{lvlInfo.hoursPlayed} giờ</strong>
+          </div>
+          <div className="level-stat-box">
+            <span>Tổng xu đã nạp</span>
+            <strong>{number(lvlInfo.totalCoinsBought)} xu</strong>
+          </div>
+        </div>
+
+        {lvlInfo.blockedAtCheckpoint && (
+          <div style={{ background: "rgba(255, 170, 0, 0.12)", border: "1px solid rgba(255, 170, 0, 0.4)", borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+              <Lock size={20} style={{ color: "#ffaa00", flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <strong style={{ color: "#ffaa00", fontSize: "13px", display: "block", marginBottom: "4px" }}>
+                  Đang dừng tại Cột mốc Cấp {lvlInfo.blockedAtCheckpoint}
+                </strong>
+                <p style={{ fontSize: "12px", color: "#d2d8e8", margin: 0 }}>
+                  Để mở khóa tiến trình cấp độ tiếp theo, bạn cần tích lũy thêm <strong>{number(lvlInfo.neededCoins)} xu</strong> từ nạp số dư.
+                </p>
+                <button className="btn lime small" style={{ marginTop: "10px" }} onClick={() => { onClose(); openRefill(); }}>
+                  <Coins size={14} /> Nạp số dư mở khóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ background: "#101524", border: "1px solid #1f273d", borderRadius: "10px", padding: "14px" }}>
+          <strong style={{ fontSize: "13px", color: "#fff", display: "block", marginBottom: "6px" }}>Quy tắc tăng cấp</strong>
+          <ul style={{ fontSize: "12px", color: "#8b94ac", margin: 0, paddingLeft: "18px", lineHeight: "1.7" }}>
+            <li>Cứ mỗi <strong>10 giờ</strong> trải nghiệm game sẽ tích lũy đủ điểm tăng 1 cấp.</li>
+            <li>Tại các mốc cấp 10, 20, 30, 40, 50, 60, 70, 80, 90, 100... yêu cầu tích lũy nạp xu để mở khóa mốc tương ứng.</li>
+            <li>Mỗi khi thăng hạng cột mốc, bạn sẽ nhận được thông báo chúc mừng và các đặc quyền mở khóa trực tiếp trong Hộp thư.</li>
+          </ul>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// -------------------------------------------------------------
+// INBOX MODAL (Hộp thư & Thông báo người dùng)
+// -------------------------------------------------------------
+
+function InboxModal({
+  user,
+  onClose,
+  reload
+}: {
+  user: any;
+  onClose: () => void;
+  reload: () => Promise<any>;
+}) {
+  const notifs = user?.notifications || [];
+  const [busy, setBusy] = useState(false);
+
+  const handleReadAll = async () => {
+    setBusy(true);
+    try {
+      await action("notification.read_all");
+      await reload();
+    } catch {} finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="📬 Hộp thư & Thông báo tài khoản" onClose={onClose} wide>
+      <div className="checkout-body">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+          <span style={{ fontSize: "13px", color: "#8b94ac" }}>
+            Bạn có <strong>{user?.unreadNotificationsCount || 0}</strong> thông báo chưa đọc
+          </span>
+          {(user?.unreadNotificationsCount || 0) > 0 && (
+            <button className="btn secondary small" disabled={busy} onClick={handleReadAll}>
+              <CheckCircle2 size={14} /> Đánh dấu đã đọc tất cả
+            </button>
+          )}
+        </div>
+
+        {notifs.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "30px 0", color: "#8b94ac" }}>
+            <Mail size={36} style={{ margin: "0 auto 10px auto", opacity: 0.4 }} />
+            <p>Hiện chưa có thông báo nào trong hộp thư.</p>
+          </div>
+        ) : (
+          <div className="inbox-list">
+            {notifs.map((n: any) => (
+              <div key={n.id} className={`inbox-item ${!n.read ? "unread" : ""}`}>
+                <div className="inbox-item-top">
+                  <div className="inbox-item-title">
+                    {!n.read && <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ebff00", display: "inline-block" }} />}
+                    {n.title}
+                  </div>
+                  <span className="inbox-item-time">{date(n.created_at)}</span>
+                </div>
+                <div className="inbox-item-msg">{n.message}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -1796,33 +2443,59 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
       </div>
 
       <div className="wallet-columns">
-        <div className="panel convert-panel">
-          <span className="eyebrow subtle">TỪ XU ĐẾN GIÁ TRỊ</span>
-          <h2>Quy đổi & yêu cầu rút</h2>
-          <p>Kiểm tra số xu và thông tin nhận trước khi gửi.</p>
-          <label>Số xu quy đổi
-            <div className="input-with-unit">
-              <input type="number" min="1000" step="10" value={coins} onChange={e => setCoins(e.target.value)} aria-label="Số xu quy đổi" />
-              <span>xu</span>
+        {data?.user?.levelInfo?.canWithdraw ? (
+          <div className="panel convert-panel">
+            <span className="eyebrow subtle">TỪ XU ĐẾN GIÁ TRỊ</span>
+            <h2>Quy đổi & yêu cầu rút</h2>
+            <p>Hạn mức: tối đa ${data.user.levelInfo.maxWithdrawalUsd} USD/lần · 1 lần rút mỗi 24 giờ.</p>
+            <label>Số xu quy đổi
+              <div className="input-with-unit">
+                <input
+                  type="number"
+                  min="1000"
+                  max={data.user.levelInfo.maxWithdrawalUsd * 1000}
+                  step="10"
+                  value={coins}
+                  onChange={e => setCoins(e.target.value)}
+                  aria-label="Số xu quy đổi"
+                />
+                <span>xu</span>
+              </div>
+            </label>
+            <div className="conversion-result">
+              <span>Số tiền tương đương</span>
+              <strong>{Number.isFinite(amount) ? money(Math.floor(amount / 10)) : "$0.00"}<small>USD</small></strong>
+              <span>1.000 xu = 1 USD · Phí thử nghiệm: $0</span>
             </div>
-          </label>
-          <div className="conversion-result">
-            <span>Số tiền tương đương</span>
-            <strong>{Number.isFinite(amount) ? money(Math.floor(amount / 10)) : "$0.00"}<small>USD</small></strong>
-            <span>1.000 xu = 1 USD · Phí thử nghiệm: $0</span>
+            <div className="method-tabs">
+              <button className={method === "qr" ? "selected" : ""} onClick={() => setMethod("qr")}><QrCode size={17} />Nhận qua QR</button>
+              <button className={method === "link" ? "selected" : ""} onClick={() => setMethod("link")}><Link2 size={17} />Link ví Payoneer</button>
+            </div>
+            <label>Link nhận tiền Payoneer
+              <input type="url" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="https://…payoneer.com/…" />
+            </label>
+            <p className="field-hint">Chỉ dùng link thử nghiệm; không nhập OTP hay mật khẩu.</p>
+            <button
+              className="btn lime full"
+              disabled={!data?.user || !valid || !recipient || amount > available || amount > data.user.levelInfo.maxWithdrawalUsd * 1000}
+              onClick={() => setConfirm(true)}
+            >
+              Xem lại yêu cầu rút <ArrowRight size={17} />
+            </button>
           </div>
-          <div className="method-tabs">
-            <button className={method === "qr" ? "selected" : ""} onClick={() => setMethod("qr")}><QrCode size={17} />Nhận qua QR</button>
-            <button className={method === "link" ? "selected" : ""} onClick={() => setMethod("link")}><Link2 size={17} />Link ví Payoneer</button>
+        ) : (
+          <div className="panel convert-panel">
+            <span className="eyebrow subtle">TÍNH NĂNG RÚT TIỀN</span>
+            <h2>Quy đổi & rút tiền Payoneer</h2>
+            <div style={{ background: "#101524", border: "1px solid #1f273d", borderRadius: "10px", padding: "24px 16px", margin: "14px 0", textAlign: "center" }}>
+              <Lock size={32} style={{ color: "#8b94ac", margin: "0 auto 12px auto", display: "block" }} />
+              <strong style={{ display: "block", color: "#fff", marginBottom: "8px", fontSize: "14px" }}>Tính năng đang được kích hoạt</strong>
+              <p style={{ fontSize: "12px", color: "#8b94ac", margin: 0, lineHeight: "1.6" }}>
+                Tính năng rút tiền về ví Payoneer sẽ tự động mở khóa theo tiến trình hoạt động và đóng góp của tài khoản trên nền tảng.
+              </p>
+            </div>
           </div>
-          <label>Link nhận tiền Payoneer
-            <input type="url" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="https://…payoneer.com/…" />
-          </label>
-          <p className="field-hint">Chỉ dùng link thử nghiệm; không nhập OTP hay mật khẩu.</p>
-          <button className="btn lime full" disabled={!data?.user || !valid || !recipient || amount > available} onClick={() => setConfirm(true)}>
-            Xem lại yêu cầu rút <ArrowRight size={17} />
-          </button>
-        </div>
+        )}
 
         <div>
           <div className="panel membership-wallet">
