@@ -14,7 +14,8 @@ next-env.d.ts
 # Cloudflare / Runtime state
 .wrangler/
 .sites-runtime/
-.openai/
+# Allow hosting.json for build configuration
+!nova-arcade/**/.openai/hosting.json
 .agents/
 .codex/
 outputs/
