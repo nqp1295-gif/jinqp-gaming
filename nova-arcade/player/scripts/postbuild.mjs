@@ -8,10 +8,17 @@ const clientDir = path.join(root, "dist", "client");
 const workerDir = path.join(clientDir, "_worker.js");
 const serverWranglerPath = path.join(serverDir, "wrangler.json");
 
-// Ensure no duplicate or invalid D1 placeholder bindings in wrangler.json
+// Ensure no duplicate flags or invalid D1 placeholder bindings in wrangler.json
 if (fs.existsSync(serverWranglerPath)) {
   try {
     const cfg = JSON.parse(fs.readFileSync(serverWranglerPath, "utf-8"));
+
+    // Deduplicate compatibility flags
+    if (Array.isArray(cfg.compatibility_flags)) {
+      cfg.compatibility_flags = [...new Set(cfg.compatibility_flags)];
+    }
+
+    // Deduplicate D1 databases and filter dummy placeholder
     if (Array.isArray(cfg.d1_databases)) {
       const seen = new Set();
       cfg.d1_databases = cfg.d1_databases.filter(db => {
@@ -20,9 +27,10 @@ if (fs.existsSync(serverWranglerPath)) {
         seen.add(db.binding);
         return true;
       });
-      fs.writeFileSync(serverWranglerPath, JSON.stringify(cfg, null, 2), "utf-8");
-      console.log("[postbuild] Cleaned d1_databases in dist/server/wrangler.json.");
     }
+
+    fs.writeFileSync(serverWranglerPath, JSON.stringify(cfg, null, 2), "utf-8");
+    console.log("[postbuild] Sanitized compatibility_flags and d1_databases in dist/server/wrangler.json.");
   } catch (err) {
     console.warn("[postbuild] Warning processing wrangler.json:", err);
   }
