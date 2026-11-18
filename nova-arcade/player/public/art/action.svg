@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="act-bg" x2="800" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A0B1E"/>
+      <stop offset="0.6" stop-color="#2D0B24"/>
+      <stop offset="1" stop-color="#0E0512"/>
+    </linearGradient>
+    <linearGradient id="act-slash" x1="150" y1="400" x2="650" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF0055"/>
+      <stop offset="0.5" stop-color="#FF7700"/>
+      <stop offset="1" stop-color="#FFEE00"/>
+    </linearGradient>
+    <radialGradient id="act-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop stop-color="#FF0055" stop-opacity="0.8"/>
+      <stop offset="0.5" stop-color="#FF5500" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#1A0B1E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#act-bg)"/>
+  <circle cx="400" cy="250" r="180" fill="url(#act-glow)"/>
+  <!-- Action Sparks / Geometric shapes -->
+  <path d="M120 80 L180 120 L140 180 Z" fill="#FF0055" fill-opacity="0.3"/>
+  <path d="M680 380 L620 440 L700 450 Z" fill="#FF7700" fill-opacity="0.3"/>
+  <!-- Dynamic Cross Slash Lines -->
+  <path d="M100 420 Q 380 260 700 80" stroke="url(#act-slash)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M110 410 Q 380 255 690 90" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M180 100 Q 390 240 620 400" stroke="#00F0FF" stroke-width="6" stroke-linecap="round" stroke-opacity="0.7"/>
+  <!-- Cyber Katana / Blade Silhouette -->
+  <g transform="translate(400, 250) rotate(-35)">
+    <rect x="-240" y="-8" width="440" height="16" rx="4" fill="#E2E8F0"/>
+    <rect x="-230" y="-3" width="420" height="6" rx="2" fill="#FFFFFF"/>
+    <!-- Guard -->
+    <rect x="200" y="-28" width="16" height="56" rx="4" fill="#FF0055"/>
+    <!-- Handle -->
+    <rect x="216" y="-12" width="100" height="24" rx="4" fill="#1E1B2E" stroke="#FF7700" stroke-width="2"/>
+    <line x1="236" y1="-12" x2="236" y2="12" stroke="#FF7700" stroke-width="2"/>
+    <line x1="256" y1="-12" x2="256" y2="12" stroke="#FF7700" stroke-width="2"/>
+    <line x1="276" y1="-12" x2="276" y2="12" stroke="#FF7700" stroke-width="2"/>
+    <line x1="296" y1="-12" x2="296" y2="12" stroke="#FF7700" stroke-width="2"/>
+  </g>
+  <!-- Impact Particles -->
+  <circle cx="380" cy="240" r="8" fill="#FFEE00"/>
+  <circle cx="430" cy="270" r="5" fill="#FF5500"/>
+  <circle cx="340" cy="280" r="6" fill="#FF0055"/>
+  <circle cx="460" cy="210" r="7" fill="#00F0FF"/>
+  <circle cx="280" cy="330" r="4" fill="#FFFFFF"/>
+  <circle cx="530" cy="170" r="4" fill="#FFFFFF"/>
+</svg>

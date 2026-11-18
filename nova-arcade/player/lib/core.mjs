@@ -238,7 +238,7 @@ export async function seed(db) {
   } catch {}
 
   const ver = (await one(db, "SELECT value FROM app_settings WHERE key='seed_version'"))?.value;
-  if (ver === "2.0") return;
+  if (ver === "3.0") return;
 
   const commands = [];
   const prices = { bronze: [300, 900, 7900], gold: [700, 1900, 17900], diamond: [1500, 3900, 34900] };
@@ -257,17 +257,74 @@ export async function seed(db) {
     }
   }
 
-  // Catalog: all 6 games with full HTML5/Canvas engines!
+  // Catalog: 50 games across 7 categories with fully playable engines
   const catalog = [
+    // 1. Trí tuệ (7 games)
     ["memory", "Memory Garden", "Lật thẻ, tìm cặp và thử thách trí nhớ", "Trí tuệ", "memory", "memory", 80],
     ["number", "Number Rush", "Tăng tốc tư duy qua 10 phép tính nhanh", "Trí tuệ", "number", "number", 100],
-    ["reflex", "Neon Reflex", "Giữ bình tĩnh. Chạm đúng tín hiệu ánh sáng.", "Phản xạ", "reflex", "reflex", 60],
-    ["blocks", "Block District", "Giải đố khối màu, xếp khít dòng và cột kiểu KHỐI8", "Giải đố", "blocks", "blocks", 120],
-    ["orbit", "Orbit Runner", "Điều khiển phi thuyền chuyển quỹ đạo né thiên thạch", "Hành động", "orbit", "orbit", 90],
-    ["word", "Word Voyage", "Khám phá từ vựng, giải mã các chữ cái xáo trộn", "Giáo dục", "word", "word", 110],
+    ["matrix-mind", "Matrix Mind", "Ghi nhớ ma trận số và quy luật tư duy đỉnh cao", "Trí tuệ", "number", "number", 110],
+    ["super-recall", "Super Recall", "Thử thách trí nhớ siêu phàm qua các chuỗi thẻ liên hoàn", "Trí tuệ", "memory", "memory", 90],
+    ["logic-master", "Logic Master", "Đấu trí số học và tìm ẩn số ma thuật chính xác", "Trí tuệ", "number", "number", 120],
+    ["reverse-think", "Reverse Think", "Tư duy đảo ngược và phản ứng logic thần tốc", "Trí tuệ", "number", "number", 85],
+    ["iq-arena", "IQ Arena", "Võ đài trí tuệ đỉnh cao tranh tài tư duy sắc bén", "Trí tuệ", "memory", "memory", 130],
+
+    // 2. Hành động (7 games)
+    ["shadow-strike", "Shadow Strike", "Đột kích bóng đêm, phản xạ chém nhanh chuẩn xác", "Hành động", "action", "reflex", 100],
+    ["ninja-slash", "Ninja Slash", "Đường kiếm sắc bén chém gục mục tiêu trong chớp mắt", "Hành động", "action", "reflex", 110],
+    ["cyber-warrior", "Cyber Warrior", "Chiến binh mạng luồn lách qua hệ thống phòng ngự", "Hành động", "action", "orbit", 95],
+    ["street-fighter", "Street Fighter", "Quyền vương đường phố tung đòn phản xạ cực chuẩn", "Hành động", "action", "reflex", 105],
+    ["beast-hunter", "Beast Hunter", "Thợ săn quái thú, né tránh móng vuốt trong gang tấc", "Hành động", "action", "orbit", 115],
+    ["secret-agent", "Secret Agent", "Điệp viên thâm nhập, phản ứng mau lẹ trước cạm bẫy", "Hành động", "action", "reflex", 90],
+    ["master-archer", "Master Archer", "Thiện xạ bách phát bách trúng hạ gục hồng tâm", "Hành động", "action", "reflex", 120],
+
+    // 3. Phản xạ (7 games)
+    ["reflex", "Neon Reflex", "Giữ bình tĩnh. Chạm đúng tín hiệu ánh sáng", "Phản xạ", "reflex", "reflex", 60],
+    ["speed-tap", "Speed Tap", "Chạm màn hình tốc độ cao thử thách ngón tay vàng", "Phản xạ", "reflex", "reflex", 75],
+    ["bullseye-blitz", "Bullseye Blitz", "Bắn trúng tâm điểm chớp nhoáng nhận thưởng lớn", "Phản xạ", "reflex", "reflex", 85],
+    ["green-light-rush", "Green Light Rush", "Tiến bước khi đèn xanh, dừng lại ngay khi đèn đỏ", "Phản xạ", "reflex", "reflex", 95],
+    ["diamond-snatch", "Diamond Snatch", "Giật lấy kim cương quý giá trước khi bẫy sập", "Phản xạ", "reflex", "reflex", 90],
+    ["voltage-jump", "Voltage Jump", "Phản xạ vượt xung điện cao thế nghẹt thở", "Phản xạ", "reflex", "reflex", 105],
+    ["whack-master", "Whack Master", "Đập búa siêu tốc bắt trọn mọi sinh vật tinh quái", "Phản xạ", "reflex", "reflex", 80],
+
+    // 4. Giải đố (7 games)
+    ["word", "Word Voyage", "Khám phá từ vựng, giải mã các chữ cái xáo trộn", "Giải đố", "word", "word", 110],
+    ["word-master", "Word Master", "Bậc thầy ngôn ngữ giải đố các cụm từ hóc búa", "Giải đố", "word", "word", 120],
+    ["anagram-quest", "Anagram Quest", "Tìm đảo ngữ bí ẩn và mở khóa rương kho báu", "Giải đố", "word", "word", 100],
+    ["mystic-maze", "Mystic Maze", "Khám phá mê cung huyền bí qua quy luật số học", "Giải đố", "puzzle", "number", 90],
+    ["circuit-connect", "Circuit Connect", "Nối mạch điện tử thông minh thắp sáng mạng lưới", "Giải đố", "puzzle", "memory", 115],
+    ["rope-rescue", "Rope Rescue", "Gỡ rối dây thừng và giải cứu mục tiêu an toàn", "Giải đố", "puzzle", "memory", 95],
+    ["riddle-realm", "Riddle Realm", "Vùng đất câu đố ma thuật thử thách óc phán đoán", "Giải đố", "puzzle", "word", 130],
+
+    // 5. Đua xe (7 games)
+    ["turbo-highway", "Turbo Highway", "Cao tốc tử thần, phóng hết ga lượn làn tránh xe tải", "Đua xe", "racing", "orbit", 100],
+    ["neon-drift", "Neon Drift", "Khúc cua rực rỡ neon, ôm cua điệu nghệ không va chạm", "Đua xe", "racing", "orbit", 110],
+    ["grand-prix-apex", "Grand Prix Apex", "Chinh phục đỉnh vinh quang F1 trên đường đua thế giới", "Đua xe", "racing", "orbit", 125],
+    ["monster-offroad", "Monster Offroad", "Xe quái thú vượt địa hình hiểm trở và chướng ngại vật", "Đua xe", "racing", "orbit", 95],
+    ["cosmic-racer", "Cosmic Racer", "Đua phi thuyền siêu thanh xuyên không gian vô tận", "Đua xe", "racing", "orbit", 105],
+    ["highway-pursuit", "Highway Pursuit", "Cuộc truy đuổi nghẹt thở của cảnh sát trên đại lộ", "Đua xe", "racing", "orbit", 115],
+    ["cyber-bus-2099", "Cyber Bus 2099", "Lái buýt tương lai vượt qua luồng giao thông tầng cao", "Đua xe", "racing", "orbit", 90],
+
+    // 6. Không gian (7 games)
+    ["orbit", "Orbit Runner", "Điều khiển phi thuyền chuyển quỹ đạo né thiên thạch", "Không gian", "space", "orbit", 90],
+    ["galaxy-fire", "Galaxy Fire", "Hạm đội liên sao nghênh chiến hỏa lực ngoài hành tinh", "Không gian", "space", "orbit", 120],
+    ["mars-lander", "Mars Lander", "Hạ cánh thám hiểm sao Hỏa trên bãi đáp an toàn", "Không gian", "space", "orbit", 110],
+    ["black-hole-escape", "Black Hole Escape", "Thoát khỏi lực hút hố đen trước khi bị nuốt chửng", "Không gian", "space", "orbit", 130],
+    ["satellite-gatherer", "Satellite Gatherer", "Thu thập vệ tinh hỏng và dọn dẹp rác vũ trụ", "Không gian", "space", "orbit", 95],
+    ["station-defense", "Station Defense", "Bảo vệ trạm không gian quốc tế khỏi mưa sao băng", "Không gian", "space", "orbit", 105],
+    ["wormhole-warp", "Wormhole Warp", "Du hành xuyên lỗ sâu tới các thiên hà xa xôi", "Không gian", "space", "orbit", 115],
+
+    // 7. Xếp hình (8 games)
+    ["blocks", "Block District", "Giải đố khối màu, xếp khít dòng và cột kiểu KHỐI8", "Xếp hình", "blocks", "blocks", 120],
+    ["wood-block-puzzle", "Wood Block Puzzle", "Khối gỗ mộc mạc, thư giãn xếp hàng nhận điểm kỷ lục", "Xếp hình", "blocks", "blocks", 100],
+    ["crystal-match", "Crystal Match", "Ghép ngọc pha lê lấp lánh phát nổ thành chuỗi combo", "Xếp hình", "blocks", "memory", 110],
+    ["merge-2048", "Merge 2048", "Hợp nhất các khối số tương đương đạt đỉnh 2048", "Xếp hình", "blocks", "number", 130],
+    ["ice-tetris", "Ice Tetris", "Những khối băng trơn trượt thử thách xếp tầng thần tốc", "Xếp hình", "blocks", "blocks", 115],
+    ["classic-brick", "Classic Brick", "Gạch cổ điển huyền thoại tuổi thơ sống lại rực rỡ", "Xếp hình", "blocks", "blocks", 105],
+    ["dice-matcher", "Dice Matcher", "Xúc xắc ma thuật ghép 3 mặt đồng điệu ghi điểm", "Xếp hình", "blocks", "memory", 95],
+    ["mecha-assembly", "Mecha Assembly", "Lắp ghép robot cơ giáp chiến đấu hoàn hảo từng chi tiết", "Xếp hình", "blocks", "blocks", 125],
   ];
   catalog.forEach((g, i) => {
-    commands.push(stmt(db, "INSERT INTO games (id,title,subtitle,category,art,engine,active,base_reward,sort) VALUES (?,?,?,?,?,?,1,?,?) ON CONFLICT(id) DO UPDATE SET engine=excluded.engine,active=1", [...g, i]));
+    commands.push(stmt(db, "INSERT INTO games (id,title,subtitle,category,art,engine,active,base_reward,sort) VALUES (?,?,?,?,?,?,1,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,subtitle=excluded.subtitle,category=excluded.category,art=excluded.art,engine=excluded.engine,active=1,base_reward=excluded.base_reward,sort=excluded.sort", [...g, i]));
   });
 
   // System accounts for double-entry ledger
@@ -322,7 +379,7 @@ export async function seed(db) {
       currency: "USD"
     })
   ]));
-  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','2.0') ON CONFLICT(key) DO UPDATE SET value='2.0'", []));
+  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','3.0') ON CONFLICT(key) DO UPDATE SET value='3.0'", []));
 
   await db.batch(commands);
 }
@@ -933,25 +990,27 @@ const WORDS_VOCABULARY = [
 
 function publicState(session) {
   const s = parse(session.state_json);
+  const engine = s.engine || session.game_id;
   const common = {
     id: session.id,
     gameId: session.game_id,
+    engine,
     version: session.version,
     completed: !!session.completed,
     score: session.score,
     expiresAt: session.expires_at
   };
 
-  if (session.game_id === "memory") {
+  if (engine === "memory") {
     return { ...common, moves: s.moves, matched: s.matched, cards: s.deck.map((v, i) => s.matched.includes(i) || s.open.includes(i) ? v : null) };
   }
-  if (session.game_id === "number") {
+  if (engine === "number") {
     return { ...common, index: s.index, total: 10, correct: s.correct, feedback: s.feedback, question: s.questions[s.index]?.text || null };
   }
-  if (session.game_id === "reflex") {
+  if (engine === "reflex") {
     return { ...common, round: s.round, total: 5, goAt: s.goAt, times: s.times, feedback: s.feedback };
   }
-  if (session.game_id === "blocks") {
+  if (engine === "blocks") {
     return {
       ...common,
       board: s.board,
@@ -963,7 +1022,7 @@ function publicState(session) {
       totalTurns: 6
     };
   }
-  if (session.game_id === "orbit") {
+  if (engine === "orbit") {
     return {
       ...common,
       lane: s.lane,
@@ -974,7 +1033,7 @@ function publicState(session) {
       feedback: s.feedback
     };
   }
-  if (session.game_id === "word") {
+  if (engine === "word") {
     return {
       ...common,
       index: s.index,
@@ -995,10 +1054,11 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
   const recent = await one(db, "SELECT COUNT(*) AS n FROM game_sessions WHERE user_id=? AND created_at>?", [userId, now - 60000]);
   if (recent.n >= 15) throw new AppError("Bạn mở phiên quá nhanh. Hãy đợi một chút.", 429);
 
+  const engine = g.engine || "reflex";
   let state;
-  if (gameId === "memory") {
+  if (engine === "memory") {
     state = { deck: shuffle([0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]), open: [], matched: [], moves: 0 };
-  } else if (gameId === "number") {
+  } else if (engine === "number") {
     state = {
       index: 0, correct: 0, feedback: null,
       questions: Array.from({ length: 10 }, () => {
@@ -1006,9 +1066,9 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
         return { text: `${a} ${m ? "×" : "+"} ${b}`, answer: m ? a * b : a + b };
       })
     };
-  } else if (gameId === "reflex") {
+  } else if (engine === "reflex") {
     state = { round: 0, goAt: now + 2000 + rand(2000), times: [], feedback: "Chờ tín hiệu xanh…" };
-  } else if (gameId === "blocks") {
+  } else if (engine === "blocks") {
     // 8x8 board: 64 cells
     state = {
       board: Array(64).fill(0),
@@ -1018,7 +1078,7 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
       feedback: "Chọn một khối hình và đặt vào ô trống trên bàn cờ.",
       turn: 1
     };
-  } else if (gameId === "orbit") {
+  } else if (engine === "orbit") {
     // 3 orbital lanes: 0 (Inner), 1 (Middle), 2 (Outer)
     const hazard = rand(3);
     state = {
@@ -1028,7 +1088,7 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
       strikeAt: now + 2200,
       feedback: `Cảnh báo thiên thạch ở quỹ đạo ${hazard === 0 ? "Trong" : hazard === 1 ? "Giữa" : "Ngoài"}!`
     };
-  } else if (gameId === "word") {
+  } else if (engine === "word") {
     const shuffledWords = shuffle(WORDS_VOCABULARY).slice(0, 5);
     const firstWord = shuffledWords[0];
     state = {
@@ -1042,6 +1102,7 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
   } else {
     throw new AppError("Loại trò chơi chưa được hỗ trợ.");
   }
+  state.engine = engine;
 
   const session = {
     id: id(),
@@ -1071,9 +1132,10 @@ export async function gameAction(db, userId, input, now = Date.now()) {
   if (input.version !== session.version) throw new AppError("Thao tác đã thay đổi. Vui lòng thử lại.", 409);
 
   const s = parse(session.state_json);
+  const engine = s.engine || session.game_id;
   let completed = 0, score = session.score;
 
-  if (session.game_id === "memory") {
+  if (engine === "memory") {
     const index = integer(input.index, 0, 15, "Thẻ");
     if (s.open.length === 2) s.open = [];
     if (s.matched.includes(index) || s.open.includes(index)) throw new AppError("Chọn một thẻ khác.");
@@ -1088,7 +1150,7 @@ export async function gameAction(db, userId, input, now = Date.now()) {
     completed = s.matched.length === 16 ? 1 : 0;
     score = completed ? Math.max(20, 160 - (s.moves - 8) * 5) : s.matched.length * 10;
 
-  } else if (session.game_id === "number") {
+  } else if (engine === "number") {
     const answer = integer(input.answer, -10000, 10000, "Câu trả lời");
     const correct = answer === s.questions[s.index].answer;
     s.correct += correct ? 1 : 0;
@@ -1097,7 +1159,7 @@ export async function gameAction(db, userId, input, now = Date.now()) {
     completed = s.index === 10 ? 1 : 0;
     score = s.correct * 100;
 
-  } else if (session.game_id === "reflex") {
+  } else if (engine === "reflex") {
     const elapsed = now - s.goAt;
     s.round++;
     s.times.push(elapsed >= 100 && elapsed <= 3000 ? elapsed : 3000);
@@ -1106,7 +1168,7 @@ export async function gameAction(db, userId, input, now = Date.now()) {
     completed = s.round === 5 ? 1 : 0;
     score = Math.max(0, Math.round(1000 - s.times.reduce((a, b) => a + b, 0) / s.times.length / 3));
 
-  } else if (session.game_id === "blocks") {
+  } else if (engine === "blocks") {
     const pieceIdx = integer(input.pieceIndex, 0, 2, "Khối hình");
     const targetRow = integer(input.row, 0, 7, "Hàng");
     const targetCol = integer(input.col, 0, 7, "Cột");
@@ -1167,7 +1229,7 @@ export async function gameAction(db, userId, input, now = Date.now()) {
       }
     }
 
-  } else if (session.game_id === "orbit") {
+  } else if (engine === "orbit") {
     // Lane switch or wait
     if (input.lane !== undefined) {
       s.lane = integer(input.lane, 0, 2, "Quỹ đạo");
@@ -1193,7 +1255,7 @@ export async function gameAction(db, userId, input, now = Date.now()) {
       s.feedback += ` Đợt ${s.wave + 1}: Thiên thạch quỹ đạo ${nextHazard === 0 ? "Trong" : nextHazard === 1 ? "Giữa" : "Ngoài"}!`;
     }
 
-  } else if (session.game_id === "word") {
+  } else if (engine === "word") {
     const guess = str(input.guess, 1, 20, "Từ đoán").toUpperCase().trim();
     const targetWord = s.words[s.index].word;
     const isCorrect = guess === targetWord;

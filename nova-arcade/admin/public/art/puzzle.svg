@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="puz-bg" x2="800" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#081426"/>
+      <stop offset="0.6" stop-color="#0D2545"/>
+      <stop offset="1" stop-color="#040A14"/>
+    </linearGradient>
+    <linearGradient id="puz-glow" x1="250" y1="120" x2="550" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00F0FF"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <radialGradient id="puz-rad" cx="0.5" cy="0.5" r="0.5">
+      <stop stop-color="#00F0FF" stop-opacity="0.4"/>
+      <stop offset="0.7" stop-color="#8B5CF6" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#081426" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#puz-bg)"/>
+  <circle cx="400" cy="250" r="200" fill="url(#puz-rad)"/>
+  <!-- Background Grid Pattern -->
+  <g stroke="#1E3A8A" stroke-width="1.5" stroke-opacity="0.3">
+    <line x1="100" y1="100" x2="700" y2="100"/>
+    <line x1="100" y1="200" x2="700" y2="200"/>
+    <line x1="100" y1="300" x2="700" y2="300"/>
+    <line x1="100" y1="400" x2="700" y2="400"/>
+    <line x1="200" y1="50" x2="200" y2="450"/>
+    <line x1="300" y1="50" x2="300" y2="450"/>
+    <line x1="400" y1="50" x2="400" y2="450"/>
+    <line x1="500" y1="50" x2="500" y2="450"/>
+    <line x1="600" y1="50" x2="600" y2="450"/>
+  </g>
+  <!-- Floating Puzzle Pieces -->
+  <g transform="translate(320, 160) scale(1.1)">
+    <!-- Puzzle Piece 1: Left / Main -->
+    <path d="M 0 0 H 60 C 60 -18, 80 -18, 80 0 H 140 V 60 C 158 60, 158 80, 140 80 V 140 H 80 C 80 122, 60 122, 60 140 H 0 V 80 C -18 80, -18 60, 0 60 Z" fill="url(#puz-glow)" stroke="#67E8F9" stroke-width="3"/>
+  </g>
+  <g transform="translate(450, 200) scale(0.9)" opacity="0.85">
+    <!-- Puzzle Piece 2: Matching -->
+    <path d="M 0 0 H 60 C 60 18, 80 18, 80 0 H 140 V 60 C 122 60, 122 80, 140 80 V 140 H 80 C 80 158, 60 158, 60 140 H 0 V 80 C 18 80, 18 60, 0 60 Z" fill="#1E293B" stroke="#A855F7" stroke-width="3"/>
+  </g>
+  <!-- Glowing Connection Nodes -->
+  <circle cx="320" cy="160" r="6" fill="#00F0FF"/>
+  <circle cx="474" cy="226" r="8" fill="#F43F5E"/>
+  <circle cx="460" cy="314" r="7" fill="#10B981"/>
+  <circle cx="580" cy="330" r="5" fill="#FBBF24"/>
+  <!-- Connecting Circuits -->
+  <path d="M 160 380 H 260 L 320 320 V 240" stroke="#00F0FF" stroke-width="2" stroke-dasharray="6 4" stroke-opacity="0.7"/>
+  <path d="M 640 120 H 540 L 480 180" stroke="#A855F7" stroke-width="2" stroke-dasharray="6 4" stroke-opacity="0.7"/>
+</svg>

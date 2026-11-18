@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="s-bg" x2="800" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#070716"/>
+      <stop offset="0.5" stop-color="#120A2C"/>
+      <stop offset="1" stop-color="#02000A"/>
+    </linearGradient>
+    <radialGradient id="s-nebula" cx="0.5" cy="0.5" r="0.5">
+      <stop stop-color="#9D4EDD" stop-opacity="0.6"/>
+      <stop offset="0.5" stop-color="#3A0CA3" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#120A2C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="s-nebula2" cx="0.5" cy="0.5" r="0.5">
+      <stop stop-color="#4CC9F0" stop-opacity="0.5"/>
+      <stop offset="0.6" stop-color="#4361EE" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#120A2C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="s-planet1" cx="0.35" cy="0.35" r="0.65">
+      <stop stop-color="#F72585"/>
+      <stop offset="0.6" stop-color="#7209B7"/>
+      <stop offset="1" stop-color="#3A0CA3"/>
+    </radialGradient>
+    <radialGradient id="s-planet2" cx="0.3" cy="0.3" r="0.7">
+      <stop stop-color="#4CC9F0"/>
+      <stop offset="0.7" stop-color="#4895EF"/>
+      <stop offset="1" stop-color="#3F37C9"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#s-bg)"/>
+  <!-- Nebulae -->
+  <circle cx="300" cy="220" r="280" fill="url(#s-nebula)"/>
+  <circle cx="560" cy="280" r="240" fill="url(#s-nebula2)"/>
+  <!-- Distant Stars -->
+  <g fill="#FFFFFF" opacity="0.8">
+    <circle cx="45" cy="80" r="1.5"/><circle cx="120" cy="40" r="2"/><circle cx="210" cy="110" r="1"/>
+    <circle cx="340" cy="50" r="1.5"/><circle cx="450" cy="90" r="2"/><circle cx="620" cy="45" r="1"/>
+    <circle cx="730" cy="120" r="2.5"/><circle cx="780" cy="70" r="1"/><circle cx="90" cy="390" r="1.5"/>
+    <circle cx="160" cy="450" r="2"/><circle cx="280" cy="420" r="1"/><circle cx="490" cy="460" r="2"/>
+    <circle cx="680" cy="420" r="1.5"/><circle cx="750" cy="380" r="1"/><circle cx="380" cy="320" r="1"/>
+    <circle cx="510" cy="190" r="2.5"/><circle cx="240" cy="270" r="1.5"/><circle cx="670" cy="240" r="2"/>
+  </g>
+  <!-- Constellation Lines -->
+  <path d="M120 40 L210 110 L340 50 M620 45 L730 120 L780 70 M90 390 L160 450 L280 420" stroke="#4CC9F0" stroke-width="0.7" stroke-opacity="0.4"/>
+  <!-- Giant Ringed Planet -->
+  <g transform="translate(480, 210)">
+    <!-- Back of Ring -->
+    <ellipse cx="0" cy="0" rx="190" ry="42" transform="rotate(-18)" stroke="#F72585" stroke-width="14" stroke-opacity="0.3"/>
+    <ellipse cx="0" cy="0" rx="180" ry="38" transform="rotate(-18)" stroke="#4CC9F0" stroke-width="5" stroke-opacity="0.7"/>
+    <!-- Planet Sphere -->
+    <circle cx="0" cy="0" r="95" fill="url(#s-planet1)"/>
+    <!-- Surface swirls -->
+    <path d="M-80 -25 Q0 -10 80 -25 M-92 10 Q0 30 92 10 M-85 45 Q0 60 85 45" stroke="#FFE600" stroke-width="3" stroke-opacity="0.4" stroke-linecap="round"/>
+    <!-- Front of Ring -->
+    <path d="M-175 52 A 180 38 0 0 0 175 -52" transform="rotate(-18)" stroke="#F72585" stroke-width="14" stroke-opacity="0.6"/>
+    <path d="M-175 52 A 180 38 0 0 0 175 -52" transform="rotate(-18)" stroke="#FFE600" stroke-width="4"/>
+  </g>
+  <!-- Small Blue Moon -->
+  <circle cx="180" cy="170" r="38" fill="url(#s-planet2)"/>
+  <ellipse cx="180" cy="170" rx="55" ry="12" transform="rotate(25 180 170)" stroke="#4CC9F0" stroke-width="2" stroke-opacity="0.6"/>
+  <!-- Shooting Star -->
+  <path d="M100 80 L220 160" stroke="url(#s-planet2)" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="220" cy="160" r="3" fill="#FFF"/>
+</svg>

@@ -485,12 +485,14 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
         <nav className="category-nav">
           {[
             [t("catBrain"), "✦", "Trí tuệ"],
-            [t("catReflex"), "ϟ", "Phản xạ"],
-            [t("catPuzzle"), "▦", "Giải đố"],
             [t("catAction"), "↗", "Hành động"],
-            [t("catEducation"), "✍", "Giáo dục"]
+            [t("catReflex"), "ϟ", "Phản xạ"],
+            [t("catPuzzle"), "🧩", "Giải đố"],
+            [t("catRacing"), "🏎", "Đua xe"],
+            [t("catSpace"), "🚀", "Không gian"],
+            [t("catBlocks"), "▦", "Xếp hình"]
           ].map(([label, s, c]) => (
-            <button key={c} className="nav-item" onClick={() => { navigate("explore"); setCategory(c); }}>
+            <button key={c} className={`nav-item ${category === c ? "active" : ""}`} onClick={() => { navigate("explore"); setCategory(c); }}>
               <span className="category-symbol">{s}</span>{label}
             </button>
           ))}
@@ -725,10 +727,12 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
                       {[
                         [t("catAll"), "Tất cả"],
                         [t("catBrain"), "Trí tuệ"],
+                        [t("catAction"), "Hành động"],
                         [t("catReflex"), "Phản xạ"],
                         [t("catPuzzle"), "Giải đố"],
-                        [t("catAction"), "Hành động"],
-                        [t("catEducation"), "Giáo dục"]
+                        [t("catRacing"), "Đua xe"],
+                        [t("catSpace"), "Không gian"],
+                        [t("catBlocks"), "Xếp hình"]
                       ].map(([label, c], i) => (
                         <button className={`filter ${category === c ? "selected" : ""}`} key={c} onClick={() => setCategory(c)}>
                           {i === 0 && <Compass size={15} />} {label}
@@ -2079,20 +2083,25 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
             </div>
           ) : (
             <>
-              <div className="game-scorebar">
-                <span>
-                  {game.id === "memory" ? `Ghép được ${session.matched.length / 2}/8 cặp` :
-                   game.id === "number" ? `Câu hỏi ${session.index + 1}/10` :
-                   game.id === "reflex" ? `Lượt phản xạ ${session.round + 1}/5` :
-                   game.id === "blocks" ? `Lượt xếp ${session.turn}/6 · Đã xóa ${session.linesCleared} hàng` :
-                   game.id === "orbit" ? `Đợt sóng ${session.wave + 1}/8` :
-                   `Từ vựng ${session.index + 1}/5`}
-                </span>
-                <strong>{session.score} điểm</strong>
-              </div>
+              {(() => {
+                const engineType = session?.engine || game.engine || "reflex";
+                return (
+                  <div className="game-scorebar">
+                    <span>
+                      {engineType === "memory" ? `Ghép được ${session.matched?.length ? session.matched.length / 2 : 0}/8 cặp` :
+                       engineType === "number" ? `Câu hỏi ${(session.index || 0) + 1}/10` :
+                       engineType === "reflex" ? `Lượt phản xạ ${(session.round || 0) + 1}/5` :
+                       engineType === "blocks" ? `Lượt xếp ${session.turn || 1}/6 · Đã xóa ${session.linesCleared || 0} hàng` :
+                       engineType === "orbit" ? `Đợt né tránh ${(session.wave || 0) + 1}/8` :
+                       `Từ vựng ${(session.index || 0) + 1}/5`}
+                    </span>
+                    <strong>{session.score} điểm</strong>
+                  </div>
+                );
+              })()}
 
               {/* GAME 1: MEMORY */}
-              {game.id === "memory" && (
+              {(session?.engine || game.engine) === "memory" && (
                 <div className="memory-board">
                   {session.cards.map((value: number | null, index: number) => {
                     const Icon = value === null ? Sparkles : symbols[value];
@@ -2112,7 +2121,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               )}
 
               {/* GAME 2: NUMBER */}
-              {game.id === "number" && (
+              {(session?.engine || game.engine) === "number" && (
                 <form className="number-board" onSubmit={e => { e.preventDefault(); if (answer.trim()) move({ answer: Number(answer) }); }}>
                   <span>ĐIỀN ĐÁP ÁN CỦA BẠN</span>
                   <h2>{session.question}<em> = ?</em></h2>
@@ -2123,7 +2132,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               )}
 
               {/* GAME 3: REFLEX */}
-              {game.id === "reflex" && (
+              {(session?.engine || game.engine) === "reflex" && (
                 <div className="reflex-board">
                   <button className={`reaction-target ${now >= session.goAt ? "go" : ""}`} disabled={busy} onClick={() => move({})}>
                     <Zap size={48} />
@@ -2135,7 +2144,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               )}
 
               {/* GAME 4: BLOCKS DISTRICT */}
-              {game.id === "blocks" && (
+              {(session?.engine || game.engine) === "blocks" && (
                 <div className="blocks-container">
                   <div className="blocks-grid">
                     {session.board.map((filled: number, idx: number) => {
@@ -2183,7 +2192,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               )}
 
               {/* GAME 5: ORBIT RUNNER */}
-              {game.id === "orbit" && (
+              {(session?.engine || game.engine) === "orbit" && (
                 <div className="orbit-arena">
                   <div className="orbit-track-wrap">
                     <div className={`orbit-circle lane-0 ${session.hazardLanes.includes(0) ? "hazard" : ""}`} />
@@ -2218,7 +2227,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               )}
 
               {/* GAME 6: WORD VOYAGE */}
-              {game.id === "word" && (
+              {(session?.engine || game.engine) === "word" && (
                 <div className="word-box">
                   <span className="eyebrow subtle">GỢI Ý: {session.clue}</span>
                   <div className="scrambled-letters">
