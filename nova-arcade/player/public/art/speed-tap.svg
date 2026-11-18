@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-speed-tap" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#241B04"/><stop offset="0.6" stop-color="#423108"/><stop offset="1" stop-color="#120D02"/></linearGradient>
+    <filter id="glow-speed-tap" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-speed-tap)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#FACC15" opacity="0.12" filter="url(#glow-speed-tap)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Finger Tap & Sonic Ripple Rings -->
+      <g transform="translate(400, 230)">
+        <!-- Ripple Rings -->
+        <circle cx="0" cy="20" r="30" stroke="#FACC15" stroke-width="3" fill="none" opacity="0.9"/>
+        <circle cx="0" cy="20" r="60" stroke="#FACC15" stroke-width="2.5" fill="none" opacity="0.6"/>
+        <circle cx="0" cy="20" r="95" stroke="#FACC15" stroke-width="2" stroke-dasharray="8 6" fill="none" opacity="0.4"/>
+        <circle cx="0" cy="20" r="130" stroke="#FACC15" stroke-width="1.5" stroke-dasharray="4 8" fill="none" opacity="0.2"/>
+        <!-- Golden Pointer Hand / Lightning Touch -->
+        <path d="M0 -70 L0 20" stroke="#FDE047" stroke-width="8" stroke-linecap="round" filter="url(#glow-speed-tap)"/>
+        <circle cx="0" cy="20" r="14" fill="#FFFFFF" filter="url(#glow-speed-tap)"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#FACC15" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#FACC15" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">PHẢN XẠ</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

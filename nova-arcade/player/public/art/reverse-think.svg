@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-reverse-think" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#041E26"/><stop offset="0.6" stop-color="#0A3845"/><stop offset="1" stop-color="#021014"/></linearGradient>
+    <filter id="glow-reverse-think" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-reverse-think)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#06B6D4" opacity="0.12" filter="url(#glow-reverse-think)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Reverse Hourglass & Flip Arrows -->
+      <g transform="translate(400, 230)">
+        <!-- Hourglass Frame -->
+        <path d="M-45 -70 H45 L0 0 L45 70 H-45 L0 0 Z" fill="#0E4A59" stroke="#06B6D4" stroke-width="3"/>
+        <rect x="-55" y="-76" width="110" height="12" rx="4" fill="#0891B2"/>
+        <rect x="-55" y="64" width="110" height="12" rx="4" fill="#0891B2"/>
+        <!-- Glowing sand floating UPWARD -->
+        <polygon points="-25,55 25,55 0,15" fill="#22D3EE"/>
+        <circle cx="0" cy="-5" r="3" fill="#67E8F9"/>
+        <circle cx="0" cy="-20" r="3" fill="#67E8F9"/>
+        <circle cx="0" cy="-35" r="4" fill="#67E8F9"/>
+        <polygon points="-30,-60 30,-60 0,-40" fill="#22D3EE" opacity="0.6"/>
+        <!-- Orbiting Reverse Arrows -->
+        <path d="M-80 -30 A 90 90 0 0 1 80 -30" fill="none" stroke="#F97316" stroke-width="3.5" stroke-dasharray="8 4" marker-end="url(#arrow)"/>
+        <path d="M80 30 A 90 90 0 0 1 -80 30" fill="none" stroke="#F97316" stroke-width="3.5" stroke-dasharray="8 4"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#06B6D4" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#06B6D4" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">TRÍ TUỆ</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-galaxy-fire" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#240707"/><stop offset="0.6" stop-color="#450E0E"/><stop offset="1" stop-color="#120303"/></linearGradient>
+    <filter id="glow-galaxy-fire" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-galaxy-fire)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#EF4444" opacity="0.12" filter="url(#glow-galaxy-fire)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Star Destroyer Battleship & Dual Plasma Blasts -->
+      <g transform="translate(400, 230)">
+        <!-- Wedge Battleship -->
+        <polygon points="0,-90 65,50 0,35 -65,50" fill="#1F2937" stroke="#EF4444" stroke-width="3" filter="url(#glow-galaxy-fire)"/>
+        <!-- Command Bridge -->
+        <rect x="-15" y="10" width="30" height="15" rx="3" fill="#DC2626"/>
+        <!-- Dual Plasma Beams -->
+        <line x1="-35" y1="-20" x2="-35" y2="-120" stroke="#F87171" stroke-width="6" stroke-linecap="round" filter="url(#glow-galaxy-fire)"/>
+        <line x1="35" y1="-20" x2="35" y2="-120" stroke="#F87171" stroke-width="6" stroke-linecap="round" filter="url(#glow-galaxy-fire)"/>
+        <line x1="-35" y1="-20" x2="-35" y2="-120" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        <line x1="35" y1="-20" x2="35" y2="-120" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#EF4444" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">KHÔNG GIAN</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-highway-pursuit" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#081426"/><stop offset="0.6" stop-color="#0F284C"/><stop offset="1" stop-color="#040A14"/></linearGradient>
+    <filter id="glow-highway-pursuit" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-highway-pursuit)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#3B82F6" opacity="0.12" filter="url(#glow-highway-pursuit)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Police Interceptor & Strobe Flashers -->
+      <g transform="translate(400, 230)">
+        <!-- Pursuit Car Body -->
+        <rect x="-65" y="-15" width="130" height="60" rx="10" fill="#0F172A" stroke="#94A3B8" stroke-width="3"/>
+        <polygon points="-40,-15 -25,-45 25,-45 40,-15" fill="#1E293B" stroke="#CBD5E1" stroke-width="2"/>
+        <!-- Police Lightbar on Roof: Blue and Red Flash -->
+        <g transform="translate(0, -50)">
+          <rect x="-35" y="-8" width="30" height="12" rx="3" fill="#3B82F6" filter="url(#glow-highway-pursuit)"/>
+          <rect x="5" y="-8" width="30" height="12" rx="3" fill="#EF4444" filter="url(#glow-highway-pursuit)"/>
+        </g>
+        <!-- Headlights Beam -->
+        <polygon points="-50,45 -120,120 120,120 50,45" fill="#FEF08A" opacity="0.2"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#3B82F6" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#3B82F6" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">ĐUA XE</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

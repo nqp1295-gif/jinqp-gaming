@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-black-hole-escape" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#140414"/><stop offset="0.6" stop-color="#2D0B2D"/><stop offset="1" stop-color="#0A020A"/></linearGradient>
+    <filter id="glow-black-hole-escape" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-black-hole-escape)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#EC4899" opacity="0.12" filter="url(#glow-black-hole-escape)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Swirling Black Hole Event Horizon Vortex -->
+      <g transform="translate(400, 230)">
+        <!-- Accretion Disk Glow -->
+        <ellipse cx="0" cy="0" rx="140" ry="45" fill="none" stroke="#EC4899" stroke-width="12" filter="url(#glow-black-hole-escape)" transform="rotate(-20)"/>
+        <ellipse cx="0" cy="0" rx="140" ry="45" fill="none" stroke="#FDE047" stroke-width="3" transform="rotate(-20)"/>
+        <!-- The Black Hole Center -->
+        <circle cx="0" cy="0" r="50" fill="#000000" stroke="#F472B6" stroke-width="3"/>
+        <!-- Escape Ship -->
+        <g transform="translate(80, -70) rotate(-45)">
+          <polygon points="0,-15 10,10 -10,10" fill="#38BDF8"/>
+          <!-- Rocket Thrust -->
+          <polygon points="-5,10 0,25 5,10" fill="#F97316"/>
+        </g>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#EC4899" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#EC4899" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">KHÔNG GIAN</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

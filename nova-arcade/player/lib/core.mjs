@@ -238,7 +238,7 @@ export async function seed(db) {
   } catch {}
 
   const ver = (await one(db, "SELECT value FROM app_settings WHERE key='seed_version'"))?.value;
-  if (ver === "3.0") return;
+  if (ver === "4.0") return;
 
   const commands = [];
   const prices = { bronze: [300, 900, 7900], gold: [700, 1900, 17900], diamond: [1500, 3900, 34900] };
@@ -257,71 +257,71 @@ export async function seed(db) {
     }
   }
 
-  // Catalog: 50 games across 7 categories with fully playable engines
+  // Catalog: 50 games across 7 categories - each with its own unique dedicated art & fully playable engines
   const catalog = [
     // 1. Trí tuệ (7 games)
     ["memory", "Memory Garden", "Lật thẻ, tìm cặp và thử thách trí nhớ", "Trí tuệ", "memory", "memory", 80],
     ["number", "Number Rush", "Tăng tốc tư duy qua 10 phép tính nhanh", "Trí tuệ", "number", "number", 100],
-    ["matrix-mind", "Matrix Mind", "Ghi nhớ ma trận số và quy luật tư duy đỉnh cao", "Trí tuệ", "number", "number", 110],
-    ["super-recall", "Super Recall", "Thử thách trí nhớ siêu phàm qua các chuỗi thẻ liên hoàn", "Trí tuệ", "memory", "memory", 90],
-    ["logic-master", "Logic Master", "Đấu trí số học và tìm ẩn số ma thuật chính xác", "Trí tuệ", "number", "number", 120],
-    ["reverse-think", "Reverse Think", "Tư duy đảo ngược và phản ứng logic thần tốc", "Trí tuệ", "number", "number", 85],
-    ["iq-arena", "IQ Arena", "Võ đài trí tuệ đỉnh cao tranh tài tư duy sắc bén", "Trí tuệ", "memory", "memory", 130],
+    ["matrix-mind", "Matrix Mind", "Ghi nhớ ma trận số và quy luật tư duy đỉnh cao", "Trí tuệ", "matrix-mind", "number", 110],
+    ["super-recall", "Super Recall", "Thử thách trí nhớ siêu phàm qua các chuỗi thẻ liên hoàn", "Trí tuệ", "super-recall", "memory", 90],
+    ["logic-master", "Logic Master", "Đấu trí số học và tìm ẩn số ma thuật chính xác", "Trí tuệ", "logic-master", "number", 120],
+    ["reverse-think", "Reverse Think", "Tư duy đảo ngược và phản ứng logic thần tốc", "Trí tuệ", "reverse-think", "number", 85],
+    ["iq-arena", "IQ Arena", "Võ đài trí tuệ đỉnh cao tranh tài tư duy sắc bén", "Trí tuệ", "iq-arena", "memory", 130],
 
     // 2. Hành động (7 games)
-    ["shadow-strike", "Shadow Strike", "Đột kích bóng đêm, phản xạ chém nhanh chuẩn xác", "Hành động", "action", "reflex", 100],
-    ["ninja-slash", "Ninja Slash", "Đường kiếm sắc bén chém gục mục tiêu trong chớp mắt", "Hành động", "action", "reflex", 110],
-    ["cyber-warrior", "Cyber Warrior", "Chiến binh mạng luồn lách qua hệ thống phòng ngự", "Hành động", "action", "orbit", 95],
-    ["street-fighter", "Street Fighter", "Quyền vương đường phố tung đòn phản xạ cực chuẩn", "Hành động", "action", "reflex", 105],
-    ["beast-hunter", "Beast Hunter", "Thợ săn quái thú, né tránh móng vuốt trong gang tấc", "Hành động", "action", "orbit", 115],
-    ["secret-agent", "Secret Agent", "Điệp viên thâm nhập, phản ứng mau lẹ trước cạm bẫy", "Hành động", "action", "reflex", 90],
-    ["master-archer", "Master Archer", "Thiện xạ bách phát bách trúng hạ gục hồng tâm", "Hành động", "action", "reflex", 120],
+    ["shadow-strike", "Shadow Strike", "Đột kích bóng đêm, phản xạ chém nhanh chuẩn xác", "Hành động", "shadow-strike", "reflex", 100],
+    ["ninja-slash", "Ninja Slash", "Đường kiếm sắc bén chém gục mục tiêu trong chớp mắt", "Hành động", "ninja-slash", "reflex", 110],
+    ["cyber-warrior", "Cyber Warrior", "Chiến binh mạng luồn lách qua hệ thống phòng ngự", "Hành động", "cyber-warrior", "orbit", 95],
+    ["street-fighter", "Street Fighter", "Quyền vương đường phố tung đòn phản xạ cực chuẩn", "Hành động", "street-fighter", "reflex", 105],
+    ["beast-hunter", "Beast Hunter", "Thợ săn quái thú, né tránh móng vuốt trong gang tấc", "Hành động", "beast-hunter", "orbit", 115],
+    ["secret-agent", "Secret Agent", "Điệp viên thâm nhập, phản ứng mau lẹ trước cạm bẫy", "Hành động", "secret-agent", "reflex", 90],
+    ["master-archer", "Master Archer", "Thiện xạ bách phát bách trúng hạ gục hồng tâm", "Hành động", "master-archer", "reflex", 120],
 
     // 3. Phản xạ (7 games)
     ["reflex", "Neon Reflex", "Giữ bình tĩnh. Chạm đúng tín hiệu ánh sáng", "Phản xạ", "reflex", "reflex", 60],
-    ["speed-tap", "Speed Tap", "Chạm màn hình tốc độ cao thử thách ngón tay vàng", "Phản xạ", "reflex", "reflex", 75],
-    ["bullseye-blitz", "Bullseye Blitz", "Bắn trúng tâm điểm chớp nhoáng nhận thưởng lớn", "Phản xạ", "reflex", "reflex", 85],
-    ["green-light-rush", "Green Light Rush", "Tiến bước khi đèn xanh, dừng lại ngay khi đèn đỏ", "Phản xạ", "reflex", "reflex", 95],
-    ["diamond-snatch", "Diamond Snatch", "Giật lấy kim cương quý giá trước khi bẫy sập", "Phản xạ", "reflex", "reflex", 90],
-    ["voltage-jump", "Voltage Jump", "Phản xạ vượt xung điện cao thế nghẹt thở", "Phản xạ", "reflex", "reflex", 105],
-    ["whack-master", "Whack Master", "Đập búa siêu tốc bắt trọn mọi sinh vật tinh quái", "Phản xạ", "reflex", "reflex", 80],
+    ["speed-tap", "Speed Tap", "Chạm màn hình tốc độ cao thử thách ngón tay vàng", "Phản xạ", "speed-tap", "reflex", 75],
+    ["bullseye-blitz", "Bullseye Blitz", "Bắn trúng tâm điểm chớp nhoáng nhận thưởng lớn", "Phản xạ", "bullseye-blitz", "reflex", 85],
+    ["green-light-rush", "Green Light Rush", "Tiến bước khi đèn xanh, dừng lại ngay khi đèn đỏ", "Phản xạ", "green-light-rush", "reflex", 95],
+    ["diamond-snatch", "Diamond Snatch", "Giật lấy kim cương quý giá trước khi bẫy sập", "Phản xạ", "diamond-snatch", "reflex", 90],
+    ["voltage-jump", "Voltage Jump", "Phản xạ vượt xung điện cao thế nghẹt thở", "Phản xạ", "voltage-jump", "reflex", 105],
+    ["whack-master", "Whack Master", "Đập búa siêu tốc bắt trọn mọi sinh vật tinh quái", "Phản xạ", "whack-master", "reflex", 80],
 
     // 4. Giải đố (7 games)
     ["word", "Word Voyage", "Khám phá từ vựng, giải mã các chữ cái xáo trộn", "Giải đố", "word", "word", 110],
-    ["word-master", "Word Master", "Bậc thầy ngôn ngữ giải đố các cụm từ hóc búa", "Giải đố", "word", "word", 120],
-    ["anagram-quest", "Anagram Quest", "Tìm đảo ngữ bí ẩn và mở khóa rương kho báu", "Giải đố", "word", "word", 100],
-    ["mystic-maze", "Mystic Maze", "Khám phá mê cung huyền bí qua quy luật số học", "Giải đố", "puzzle", "number", 90],
-    ["circuit-connect", "Circuit Connect", "Nối mạch điện tử thông minh thắp sáng mạng lưới", "Giải đố", "puzzle", "memory", 115],
-    ["rope-rescue", "Rope Rescue", "Gỡ rối dây thừng và giải cứu mục tiêu an toàn", "Giải đố", "puzzle", "memory", 95],
-    ["riddle-realm", "Riddle Realm", "Vùng đất câu đố ma thuật thử thách óc phán đoán", "Giải đố", "puzzle", "word", 130],
+    ["word-master", "Word Master", "Bậc thầy ngôn ngữ giải đố các cụm từ hóc búa", "Giải đố", "word-master", "word", 120],
+    ["anagram-quest", "Anagram Quest", "Tìm đảo ngữ bí ẩn và mở khóa rương kho báu", "Giải đố", "anagram-quest", "word", 100],
+    ["mystic-maze", "Mystic Maze", "Khám phá mê cung huyền bí qua quy luật số học", "Giải đố", "mystic-maze", "number", 90],
+    ["circuit-connect", "Circuit Connect", "Nối mạch điện tử thông minh thắp sáng mạng lưới", "Giải đố", "circuit-connect", "memory", 115],
+    ["rope-rescue", "Rope Rescue", "Gỡ rối dây thừng và giải cứu mục tiêu an toàn", "Giải đố", "rope-rescue", "memory", 95],
+    ["riddle-realm", "Riddle Realm", "Vùng đất câu đố ma thuật thử thách óc phán đoán", "Giải đố", "riddle-realm", "word", 130],
 
     // 5. Đua xe (7 games)
-    ["turbo-highway", "Turbo Highway", "Cao tốc tử thần, phóng hết ga lượn làn tránh xe tải", "Đua xe", "racing", "orbit", 100],
-    ["neon-drift", "Neon Drift", "Khúc cua rực rỡ neon, ôm cua điệu nghệ không va chạm", "Đua xe", "racing", "orbit", 110],
-    ["grand-prix-apex", "Grand Prix Apex", "Chinh phục đỉnh vinh quang F1 trên đường đua thế giới", "Đua xe", "racing", "orbit", 125],
-    ["monster-offroad", "Monster Offroad", "Xe quái thú vượt địa hình hiểm trở và chướng ngại vật", "Đua xe", "racing", "orbit", 95],
-    ["cosmic-racer", "Cosmic Racer", "Đua phi thuyền siêu thanh xuyên không gian vô tận", "Đua xe", "racing", "orbit", 105],
-    ["highway-pursuit", "Highway Pursuit", "Cuộc truy đuổi nghẹt thở của cảnh sát trên đại lộ", "Đua xe", "racing", "orbit", 115],
-    ["cyber-bus-2099", "Cyber Bus 2099", "Lái buýt tương lai vượt qua luồng giao thông tầng cao", "Đua xe", "racing", "orbit", 90],
+    ["turbo-highway", "Turbo Highway", "Cao tốc tử thần, phóng hết ga lượn làn tránh xe tải", "Đua xe", "turbo-highway", "orbit", 100],
+    ["neon-drift", "Neon Drift", "Khúc cua rực rỡ neon, ôm cua điệu nghệ không va chạm", "Đua xe", "neon-drift", "orbit", 110],
+    ["grand-prix-apex", "Grand Prix Apex", "Chinh phục đỉnh vinh quang F1 trên đường đua thế giới", "Đua xe", "grand-prix-apex", "orbit", 125],
+    ["monster-offroad", "Monster Offroad", "Xe quái thú vượt địa hình hiểm trở và chướng ngại vật", "Đua xe", "monster-offroad", "orbit", 95],
+    ["cosmic-racer", "Cosmic Racer", "Đua phi thuyền siêu thanh xuyên không gian vô tận", "Đua xe", "cosmic-racer", "orbit", 105],
+    ["highway-pursuit", "Highway Pursuit", "Cuộc truy đuổi nghẹt thở của cảnh sát trên đại lộ", "Đua xe", "highway-pursuit", "orbit", 115],
+    ["cyber-bus-2099", "Cyber Bus 2099", "Lái buýt tương lai vượt qua luồng giao thông tầng cao", "Đua xe", "cyber-bus-2099", "orbit", 90],
 
     // 6. Không gian (7 games)
-    ["orbit", "Orbit Runner", "Điều khiển phi thuyền chuyển quỹ đạo né thiên thạch", "Không gian", "space", "orbit", 90],
-    ["galaxy-fire", "Galaxy Fire", "Hạm đội liên sao nghênh chiến hỏa lực ngoài hành tinh", "Không gian", "space", "orbit", 120],
-    ["mars-lander", "Mars Lander", "Hạ cánh thám hiểm sao Hỏa trên bãi đáp an toàn", "Không gian", "space", "orbit", 110],
-    ["black-hole-escape", "Black Hole Escape", "Thoát khỏi lực hút hố đen trước khi bị nuốt chửng", "Không gian", "space", "orbit", 130],
-    ["satellite-gatherer", "Satellite Gatherer", "Thu thập vệ tinh hỏng và dọn dẹp rác vũ trụ", "Không gian", "space", "orbit", 95],
-    ["station-defense", "Station Defense", "Bảo vệ trạm không gian quốc tế khỏi mưa sao băng", "Không gian", "space", "orbit", 105],
-    ["wormhole-warp", "Wormhole Warp", "Du hành xuyên lỗ sâu tới các thiên hà xa xôi", "Không gian", "space", "orbit", 115],
+    ["orbit", "Orbit Runner", "Điều khiển phi thuyền chuyển quỹ đạo né thiên thạch", "Không gian", "orbit", "orbit", 90],
+    ["galaxy-fire", "Galaxy Fire", "Hạm đội liên sao nghênh chiến hỏa lực ngoài hành tinh", "Không gian", "galaxy-fire", "orbit", 120],
+    ["mars-lander", "Mars Lander", "Hạ cánh thám hiểm sao Hỏa trên bãi đáp an toàn", "Không gian", "mars-lander", "orbit", 110],
+    ["black-hole-escape", "Black Hole Escape", "Thoát khỏi lực hút hố đen trước khi bị nuốt chửng", "Không gian", "black-hole-escape", "orbit", 130],
+    ["satellite-gatherer", "Satellite Gatherer", "Thu thập vệ tinh hỏng và dọn dẹp rác vũ trụ", "Không gian", "satellite-gatherer", "orbit", 95],
+    ["station-defense", "Station Defense", "Bảo vệ trạm không gian quốc tế khỏi mưa sao băng", "Không gian", "station-defense", "orbit", 105],
+    ["wormhole-warp", "Wormhole Warp", "Du hành xuyên lỗ sâu tới các thiên hà xa xôi", "Không gian", "wormhole-warp", "orbit", 115],
 
     // 7. Xếp hình (8 games)
     ["blocks", "Block District", "Giải đố khối màu, xếp khít dòng và cột kiểu KHỐI8", "Xếp hình", "blocks", "blocks", 120],
-    ["wood-block-puzzle", "Wood Block Puzzle", "Khối gỗ mộc mạc, thư giãn xếp hàng nhận điểm kỷ lục", "Xếp hình", "blocks", "blocks", 100],
-    ["crystal-match", "Crystal Match", "Ghép ngọc pha lê lấp lánh phát nổ thành chuỗi combo", "Xếp hình", "blocks", "memory", 110],
-    ["merge-2048", "Merge 2048", "Hợp nhất các khối số tương đương đạt đỉnh 2048", "Xếp hình", "blocks", "number", 130],
-    ["ice-tetris", "Ice Tetris", "Những khối băng trơn trượt thử thách xếp tầng thần tốc", "Xếp hình", "blocks", "blocks", 115],
-    ["classic-brick", "Classic Brick", "Gạch cổ điển huyền thoại tuổi thơ sống lại rực rỡ", "Xếp hình", "blocks", "blocks", 105],
-    ["dice-matcher", "Dice Matcher", "Xúc xắc ma thuật ghép 3 mặt đồng điệu ghi điểm", "Xếp hình", "blocks", "memory", 95],
-    ["mecha-assembly", "Mecha Assembly", "Lắp ghép robot cơ giáp chiến đấu hoàn hảo từng chi tiết", "Xếp hình", "blocks", "blocks", 125],
+    ["wood-block-puzzle", "Wood Block Puzzle", "Khối gỗ mộc mạc, thư giãn xếp hàng nhận điểm kỷ lục", "Xếp hình", "wood-block-puzzle", "blocks", 100],
+    ["crystal-match", "Crystal Match", "Ghép ngọc pha lê lấp lánh phát nổ thành chuỗi combo", "Xếp hình", "crystal-match", "memory", 110],
+    ["merge-2048", "Merge 2048", "Hợp nhất các khối số tương đương đạt đỉnh 2048", "Xếp hình", "merge-2048", "number", 130],
+    ["ice-tetris", "Ice Tetris", "Những khối băng trơn trượt thử thách xếp tầng thần tốc", "Xếp hình", "ice-tetris", "blocks", 115],
+    ["classic-brick", "Classic Brick", "Gạch cổ điển huyền thoại tuổi thơ sống lại rực rỡ", "Xếp hình", "classic-brick", "blocks", 105],
+    ["dice-matcher", "Dice Matcher", "Xúc xắc ma thuật ghép 3 mặt đồng điệu ghi điểm", "Xếp hình", "dice-matcher", "memory", 95],
+    ["mecha-assembly", "Mecha Assembly", "Lắp ghép robot cơ giáp chiến đấu hoàn hảo từng chi tiết", "Xếp hình", "mecha-assembly", "blocks", 125],
   ];
   catalog.forEach((g, i) => {
     commands.push(stmt(db, "INSERT INTO games (id,title,subtitle,category,art,engine,active,base_reward,sort) VALUES (?,?,?,?,?,?,1,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,subtitle=excluded.subtitle,category=excluded.category,art=excluded.art,engine=excluded.engine,active=1,base_reward=excluded.base_reward,sort=excluded.sort", [...g, i]));
@@ -379,7 +379,7 @@ export async function seed(db) {
       currency: "USD"
     })
   ]));
-  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','3.0') ON CONFLICT(key) DO UPDATE SET value='3.0'", []));
+  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','4.0') ON CONFLICT(key) DO UPDATE SET value='4.0'", []));
 
   await db.batch(commands);
 }

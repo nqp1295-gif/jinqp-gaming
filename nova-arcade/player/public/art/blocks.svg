@@ -1,1 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none"><defs><linearGradient id="bg" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#234E8A"/><stop offset="1" stop-color="#141C40"/></linearGradient><linearGradient id="violet" x2="100" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#C3AEFF"/><stop offset="1" stop-color="#9166EB"/></linearGradient><linearGradient id="mint" x2="100" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#ACFFDC"/><stop offset="1" stop-color="#54CCB6"/></linearGradient><linearGradient id="yellow" x2="100" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF1A2"/><stop offset="1" stop-color="#F5BB5B"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="20" stdDeviation="15" flood-color="#08102C" flood-opacity=".6"/></filter><symbol id="v" viewBox="0 0 83 91"><path d="M3 16h77v63a11 11 0 0 1-11 11H14A11 11 0 0 1 3 79z" fill="#5B438F"/><rect x="3" y="2" width="77" height="77" rx="11" fill="url(#violet)" stroke="#DBC9FF" stroke-width="2"/><path d="M17 15h48" stroke="#E6D9FF" stroke-opacity=".5" stroke-width="4" stroke-linecap="round"/></symbol><symbol id="m" viewBox="0 0 83 91"><path d="M3 16h77v63a11 11 0 0 1-11 11H14A11 11 0 0 1 3 79z" fill="#277C86"/><rect x="3" y="2" width="77" height="77" rx="11" fill="url(#mint)" stroke="#CBFFE7" stroke-width="2"/><path d="M17 15h48" stroke="#EAFFF8" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/></symbol><symbol id="y" viewBox="0 0 83 91"><path d="M3 16h77v63a11 11 0 0 1-11 11H14A11 11 0 0 1 3 79z" fill="#A47C44"/><rect x="3" y="2" width="77" height="77" rx="11" fill="url(#yellow)" stroke="#FFF6C2" stroke-width="2"/><path d="M17 15h48" stroke="#FFFBDE" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/></symbol></defs><path fill="url(#bg)" d="M0 0h800v500H0z"/><g transform="translate(178 82) rotate(-9 210 160)"><rect x="-20" y="-25" width="473" height="365" rx="25" fill="#122850" stroke="#78ABDB" stroke-opacity=".3" stroke-width="2"/><g opacity=".25" stroke="#9CC7E7"><path d="M-2 74h438M-2 165h438M-2 256h438M83-5v327M171-5v327M259-5v327M347-5v327"/></g><g filter="url(#s)"><use href="#v" x="0" y="8" width="83" height="91"/><use href="#v" x="88" y="8" width="83" height="91"/><use href="#v" x="88" y="99" width="83" height="91"/><use href="#v" x="176" y="99" width="83" height="91"/><use href="#m" x="0" y="190" width="83" height="91"/><use href="#m" x="0" y="281" width="83" height="91"/><use href="#m" x="88" y="281" width="83" height="91"/><use href="#y" x="264" y="190" width="83" height="91"/><use href="#y" x="352" y="190" width="83" height="91"/><use href="#y" x="264" y="281" width="83" height="91"/><use href="#y" x="352" y="281" width="83" height="91"/></g></g><g transform="translate(607 110) rotate(13)" filter="url(#s)"><use href="#m" width="83" height="91"/><use href="#m" y="91" width="83" height="91"/><use href="#m" y="182" width="83" height="91"/></g><g fill="#C0D5FF"><circle cx="77" cy="92" r="3"/><circle cx="691" cy="395" r="2"/><path d="m104 331 3 10 10 3-10 3-3 10-3-10-10-3 10-3z"/><path d="m713 71 3 10 10 3-10 3-3 10-3-10-10-3 10-3z"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-blocks" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#081426"/><stop offset="0.6" stop-color="#0E284C"/><stop offset="1" stop-color="#040A14"/></linearGradient>
+    <filter id="glow-blocks" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-blocks)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#3B82F6" opacity="0.12" filter="url(#glow-blocks)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Classic Neon Tetromino Blocks Grid -->
+      <g transform="translate(400, 230)">
+        <!-- T-Shape Cyan -->
+        <rect x="-60" y="-60" width="36" height="36" rx="6" fill="#00F0FF" stroke="#A5F3FC" stroke-width="2" filter="url(#glow-blocks)"/>
+        <rect x="-20" y="-60" width="36" height="36" rx="6" fill="#00F0FF" stroke="#A5F3FC" stroke-width="2" filter="url(#glow-blocks)"/>
+        <rect x="20" y="-60" width="36" height="36" rx="6" fill="#00F0FF" stroke="#A5F3FC" stroke-width="2" filter="url(#glow-blocks)"/>
+        <rect x="-20" y="-20" width="36" height="36" rx="6" fill="#00F0FF" stroke="#A5F3FC" stroke-width="2" filter="url(#glow-blocks)"/>
+        <!-- L-Shape Orange -->
+        <rect x="-60" y="20" width="36" height="36" rx="6" fill="#F97316" stroke="#FED7AA" stroke-width="2"/>
+        <rect x="-20" y="20" width="36" height="36" rx="6" fill="#F97316" stroke="#FED7AA" stroke-width="2"/>
+        <rect x="20" y="20" width="36" height="36" rx="6" fill="#F97316" stroke="#FED7AA" stroke-width="2"/>
+        <rect x="20" y="-20" width="36" height="36" rx="6" fill="#F97316" stroke="#FED7AA" stroke-width="2"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#3B82F6" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#3B82F6" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">XẾP HÌNH</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

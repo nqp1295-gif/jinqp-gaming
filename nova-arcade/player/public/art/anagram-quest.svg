@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-anagram-quest" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#211804"/><stop offset="0.6" stop-color="#3D2C08"/><stop offset="1" stop-color="#120D02"/></linearGradient>
+    <filter id="glow-anagram-quest" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-anagram-quest)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#EAB308" opacity="0.12" filter="url(#glow-anagram-quest)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Treasure Chest & Cryptic Letter Scramble -->
+      <g transform="translate(400, 230)">
+        <!-- Chest Lid -->
+        <path d="M-70 -20 C-70 -60 70 -60 70 -20 Z" fill="#B45309" stroke="#FDE047" stroke-width="3"/>
+        <!-- Chest Base -->
+        <rect x="-70" y="-20" width="140" height="80" rx="6" fill="#78350F" stroke="#FDE047" stroke-width="3"/>
+        <!-- Lock -->
+        <rect x="-15" y="-15" width="30" height="25" rx="4" fill="#FACC15" stroke="#CA8A04" stroke-width="2"/>
+        <circle cx="0" cy="-3" r="4" fill="#78350F"/>
+        <!-- Scrambled Letter Tokens floating out -->
+        <g transform="translate(-50, -75)">
+          <circle cx="0" cy="0" r="18" fill="#FDE047" stroke="#B45309" stroke-width="2"/>
+          <text x="0" y="7" fill="#78350F" font-family="system-ui" font-size="18" font-weight="bold" text-anchor="middle">K</text>
+        </g>
+        <g transform="translate(0, -90)">
+          <circle cx="0" cy="0" r="18" fill="#FDE047" stroke="#B45309" stroke-width="2"/>
+          <text x="0" y="7" fill="#78350F" font-family="system-ui" font-size="18" font-weight="bold" text-anchor="middle">E</text>
+        </g>
+        <g transform="translate(50, -75)">
+          <circle cx="0" cy="0" r="18" fill="#FDE047" stroke="#B45309" stroke-width="2"/>
+          <text x="0" y="7" fill="#78350F" font-family="system-ui" font-size="18" font-weight="bold" text-anchor="middle">Y</text>
+        </g>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#EAB308" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#EAB308" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">GIẢI ĐỐ</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-mystic-maze" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#041F17"/><stop offset="0.6" stop-color="#093B2C"/><stop offset="1" stop-color="#02120E"/></linearGradient>
+    <filter id="glow-mystic-maze" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-mystic-maze)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#10B981" opacity="0.12" filter="url(#glow-mystic-maze)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Isometric Glowing Labyrinth Pathway -->
+      <g transform="translate(400, 230)">
+        <!-- Maze Walls -->
+        <rect x="-90" y="-90" width="180" height="180" rx="14" fill="#064E3B" stroke="#10B981" stroke-width="3" filter="url(#glow-mystic-maze)"/>
+        <!-- Internal Maze Walls -->
+        <path d="M-60 -90 V-30 H-10 V30 H-60 V90" stroke="#34D399" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M-10 -90 V-60 H60 V0 H20 V60 H60" stroke="#34D399" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <!-- Golden Exit Orb -->
+        <circle cx="60" cy="60" r="12" fill="#FDE047" filter="url(#glow-mystic-maze)"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#10B981" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#10B981" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">GIẢI ĐỐ</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

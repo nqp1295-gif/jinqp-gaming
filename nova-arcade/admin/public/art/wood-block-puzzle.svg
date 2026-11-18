@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-wood-block-puzzle" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#211504"/><stop offset="0.6" stop-color="#3D2708"/><stop offset="1" stop-color="#120B02"/></linearGradient>
+    <filter id="glow-wood-block-puzzle" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-wood-block-puzzle)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#D97706" opacity="0.12" filter="url(#glow-wood-block-puzzle)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Natural Oak Wood Blocks & Grain Texture -->
+      <g transform="translate(400, 230)">
+        <!-- 3x3 Wood Blocks Set -->
+        <rect x="-65" y="-65" width="40" height="40" rx="5" fill="#B45309" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="-20" y="-65" width="40" height="40" rx="5" fill="#92400E" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="25" y="-65" width="40" height="40" rx="5" fill="#B45309" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="-65" y="-20" width="40" height="40" rx="5" fill="#92400E" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="-20" y="-20" width="40" height="40" rx="5" fill="#78350F" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="25" y="-20" width="40" height="40" rx="5" fill="#92400E" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="-65" y="25" width="40" height="40" rx="5" fill="#B45309" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="-20" y="25" width="40" height="40" rx="5" fill="#92400E" stroke="#FDE68A" stroke-width="2"/>
+        <rect x="25" y="25" width="40" height="40" rx="5" fill="#B45309" stroke="#FDE68A" stroke-width="2"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#D97706" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">XẾP HÌNH</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

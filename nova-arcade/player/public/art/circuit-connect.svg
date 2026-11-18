@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-circuit-connect" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#041B24"/><stop offset="0.6" stop-color="#093547"/><stop offset="1" stop-color="#020E13"/></linearGradient>
+    <filter id="glow-circuit-connect" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-circuit-connect)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#06B6D4" opacity="0.12" filter="url(#glow-circuit-connect)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Glowing Motherboard PCB Node Network -->
+      <g transform="translate(400, 230)">
+        <!-- Central Chip -->
+        <rect x="-40" y="-40" width="80" height="80" rx="10" fill="#083344" stroke="#06B6D4" stroke-width="3" filter="url(#glow-circuit-connect)"/>
+        <circle cx="0" cy="0" r="16" fill="#22D3EE"/>
+        <!-- Circuit Traces & Connecting Nodes -->
+        <path d="M-40 -20 H-90 L-120 -50" stroke="#22D3EE" stroke-width="3" fill="none"/>
+        <circle cx="-120" cy="-50" r="8" fill="#67E8F9"/>
+        <path d="M40 -20 H90 L120 -50" stroke="#22D3EE" stroke-width="3" fill="none"/>
+        <circle cx="120" cy="-50" r="8" fill="#67E8F9"/>
+        <path d="M-40 20 H-90 L-120 50" stroke="#22D3EE" stroke-width="3" fill="none"/>
+        <circle cx="-120" cy="50" r="8" fill="#67E8F9"/>
+        <path d="M40 20 H90 L120 50" stroke="#22D3EE" stroke-width="3" fill="none"/>
+        <circle cx="120" cy="50" r="8" fill="#67E8F9"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#06B6D4" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#06B6D4" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">GIẢI ĐỐ</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

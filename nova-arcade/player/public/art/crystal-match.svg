@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-crystal-match" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#240718"/><stop offset="0.6" stop-color="#450C2E"/><stop offset="1" stop-color="#12030C"/></linearGradient>
+    <filter id="glow-crystal-match" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-crystal-match)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#EC4899" opacity="0.12" filter="url(#glow-crystal-match)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Trio of Sparkling Jewels (Ruby, Sapphire, Emerald) -->
+      <g transform="translate(400, 230)">
+        <!-- Left Jewel: Emerald Hexagon -->
+        <polygon points="-70,-45 -45,-60 -45,-15 -70,0 -95,-15 -95,-60" fill="#10B981" stroke="#A7F3D0" stroke-width="2.5" filter="url(#glow-crystal-match)"/>
+        <!-- Right Jewel: Sapphire Diamond -->
+        <polygon points="70,-70 95,-35 70,0 45,-35" fill="#3B82F6" stroke="#BFDBFE" stroke-width="2.5" filter="url(#glow-crystal-match)"/>
+        <!-- Center Giant Jewel: Ruby Heart/Octagon -->
+        <polygon points="-25,0 0,-30 25,0 40,40 -40,40" fill="#EF4444" stroke="#FECACA" stroke-width="3" filter="url(#glow-crystal-match)"/>
+        <!-- Sparkle Points -->
+        <path d="M0 -50 Q0 -40 10 -40 Q0 -40 0 -30 Q0 -40 -10 -40 Q0 -40 0 -50" fill="#FFFFFF"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#EC4899" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#EC4899" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">XẾP HÌNH</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

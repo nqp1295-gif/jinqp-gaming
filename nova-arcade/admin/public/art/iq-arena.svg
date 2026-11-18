@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-iq-arena" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#240712"/><stop offset="0.6" stop-color="#420D22"/><stop offset="1" stop-color="#120309"/></linearGradient>
+    <filter id="glow-iq-arena" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-iq-arena)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#F43F5E" opacity="0.12" filter="url(#glow-iq-arena)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Championship Trophy & Diamond Crown -->
+      <g transform="translate(400, 230)">
+        <circle cx="0" cy="-20" r="105" fill="#4C0519" stroke="#F43F5E" stroke-width="2" opacity="0.5"/>
+        <!-- Golden Crown with Red Rubies -->
+        <path d="M-60 30 L-70 -30 L-25 -5 L0 -45 L25 -5 L70 -30 L60 30 Z" fill="#FB7185" stroke="#FFF" stroke-width="2.5" filter="url(#glow-iq-arena)"/>
+        <circle cx="-70" cy="-30" r="7" fill="#FFE4E6"/>
+        <circle cx="0" cy="-45" r="9" fill="#FDE047"/>
+        <circle cx="70" cy="-30" r="7" fill="#FFE4E6"/>
+        <!-- Trophy Pedestal -->
+        <rect x="-40" y="30" width="80" height="20" rx="4" fill="#881337" stroke="#FDA4AF" stroke-width="2"/>
+        <polygon points="-25,50 25,50 35,75 -35,75" fill="#9F1239"/>
+        <rect x="-50" y="75" width="100" height="15" rx="3" fill="#E11D48"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#F43F5E" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#F43F5E" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">TRÍ TUỆ</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

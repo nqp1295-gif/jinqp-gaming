@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-beast-hunter" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#141E04"/><stop offset="0.6" stop-color="#263A09"/><stop offset="1" stop-color="#0A0F02"/></linearGradient>
+    <filter id="glow-beast-hunter" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-beast-hunter)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#84CC16" opacity="0.12" filter="url(#glow-beast-hunter)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Beast Claws Rip & Forest Fangs -->
+      <g transform="translate(400, 230)">
+        <!-- 3 Giant Claw Slash Marks -->
+        <g filter="url(#glow-beast-hunter)">
+          <path d="M-75 -90 Q-60 10 -40 90" stroke="#84CC16" stroke-width="12" stroke-linecap="round" fill="none"/>
+          <path d="M-15 -100 Q0 0 20 100" stroke="#A3E635" stroke-width="14" stroke-linecap="round" fill="none"/>
+          <path d="M45 -90 Q60 10 80 90" stroke="#84CC16" stroke-width="12" stroke-linecap="round" fill="none"/>
+        </g>
+        <!-- Inner white slash highlights -->
+        <path d="M-75 -90 Q-60 10 -40 90" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <path d="M-15 -100 Q0 0 20 100" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <path d="M45 -90 Q60 10 80 90" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#84CC16" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#84CC16" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">HÀNH ĐỘNG</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bg-classic-brick" x2="800" y2="500" gradientUnits="userSpaceOnUse"><stop stop-color="#141E04"/><stop offset="0.6" stop-color="#283D08"/><stop offset="1" stop-color="#0A0F02"/></linearGradient>
+    <filter id="glow-classic-brick" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg-classic-brick)" />
+
+  <!-- Background Ambient Glow -->
+  <circle cx="400" cy="240" r="190" fill="#84CC16" opacity="0.12" filter="url(#glow-classic-brick)" />
+
+  <!-- Focal Illustration -->
+  
+      <!-- Retro Monochrome 8-bit Pixel Brick Game -->
+      <g transform="translate(400, 230)">
+        <!-- LCD Screen Frame -->
+        <rect x="-70" y="-90" width="140" height="180" rx="10" fill="#84CC16" opacity="0.9" stroke="#365314" stroke-width="5"/>
+        <!-- Pixel Bricks (Dark Green) -->
+        <g fill="#14532D">
+          <!-- Falling Piece -->
+          <rect x="-20" y="-70" width="18" height="18" rx="2"/>
+          <rect x="0" y="-70" width="18" height="18" rx="2"/>
+          <rect x="-20" y="-50" width="18" height="18" rx="2"/>
+          <rect x="0" y="-50" width="18" height="18" rx="2"/>
+          <!-- Bottom Stack -->
+          <rect x="-55" y="45" width="18" height="18" rx="2"/>
+          <rect x="-35" y="45" width="18" height="18" rx="2"/>
+          <rect x="-15" y="45" width="18" height="18" rx="2"/>
+          <rect x="5" y="45" width="18" height="18" rx="2"/>
+          <rect x="25" y="45" width="18" height="18" rx="2"/>
+          <rect x="-55" y="65" width="18" height="18" rx="2"/>
+          <rect x="-35" y="65" width="18" height="18" rx="2"/>
+          <rect x="5" y="65" width="18" height="18" rx="2"/>
+          <rect x="25" y="65" width="18" height="18" rx="2"/>
+          <rect x="45" y="65" width="18" height="18" rx="2"/>
+        </g>
+      </g>
+
+  <!-- Category & Game Branding Accent -->
+  <g transform="translate(40, 420)">
+    <rect width="130" height="30" rx="6" fill="#000000" fill-opacity="0.45" stroke="#84CC16" stroke-width="1.5" stroke-opacity="0.6"/>
+    <text x="65" y="20" fill="#84CC16" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5" text-anchor="middle">XẾP HÌNH</text>
+  </g>
+
+  <!-- Subtle Vignette Frame -->
+  <rect width="800" height="500" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+</svg>
