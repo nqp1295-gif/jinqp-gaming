@@ -18,16 +18,14 @@ if (fs.existsSync(serverWranglerPath)) {
       cfg.compatibility_flags = [...new Set(cfg.compatibility_flags)];
     }
 
-    // Deduplicate D1 databases and filter dummy placeholder
-    if (Array.isArray(cfg.d1_databases)) {
-      const seen = new Set();
-      cfg.d1_databases = cfg.d1_databases.filter(db => {
-        if (!db?.binding || seen.has(db.binding)) return false;
-        if (db.database_id === "00000000-0000-4000-8000-000000000000") return false;
-        seen.add(db.binding);
-        return true;
-      });
-    }
+    // Set production D1 database binding
+    cfg.d1_databases = [
+      {
+        binding: "DB",
+        database_name: "jinqp-d1",
+        database_id: "2002b2bd-1010-4334-8962-ed8631d36b22"
+      }
+    ];
 
     fs.writeFileSync(serverWranglerPath, JSON.stringify(cfg, null, 2), "utf-8");
     console.log("[postbuild] Sanitized compatibility_flags and d1_databases in dist/server/wrangler.json.");

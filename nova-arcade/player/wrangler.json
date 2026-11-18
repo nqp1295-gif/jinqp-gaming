@@ -5,5 +5,12 @@
   "main": "dist/server/index.js",
   "assets": {
     "directory": "dist/client"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jinqp-d1",
+      "database_id": "2002b2bd-1010-4334-8962-ed8631d36b22"
+    }
+  ]
 }
