@@ -2,6 +2,10 @@ import { getChatGPTUser } from "./chatgpt-auth";
 import Arcade from "./ui/arcade";
 export const dynamic = "force-dynamic";
 export default async function Page() {
-  const user=await getChatGPTUser();
-  return <Arcade viewer={user ? {name:user.displayName,email:user.email}:null} />;
+  let viewer = null;
+  try {
+    const user = await getChatGPTUser();
+    if (user) viewer = { name: user.displayName, email: user.email };
+  } catch {}
+  return <Arcade viewer={viewer} />;
 }

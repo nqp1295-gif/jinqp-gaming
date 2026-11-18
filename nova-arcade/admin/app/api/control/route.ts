@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const user = await getChatGPTUser();
-    const rawAllowed = env.NOVA_ADMIN_EMAILS || "seedy@sites.test,admin@nova.test,admin@example.com";
+    const rawAllowed = env.NOVA_ADMIN_EMAILS || "jinofc.ytb@gmail.com,seedy@sites.test,admin@nova.test,admin@example.com";
     const allowed = rawAllowed.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 
     if (!user || (allowed.length > 0 && !allowed.includes(user.email.toLowerCase()))) {
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     const bridgeSecret = env.NOVA_BRIDGE_SECRET || "nova-arcade-bridge-shared-secret-key-32b";
-    const playerOriginStr = env.NOVA_PLAYER_ORIGIN || "http://127.0.0.1:5173";
+    const playerOriginStr = env.NOVA_PLAYER_ORIGIN || "https://dashboardgaming.chiprin.com";
 
     const incoming = await request.text();
     if (incoming.length > 65536) return Response.json({ error: "Yêu cầu quá lớn." }, { status: 413 });
