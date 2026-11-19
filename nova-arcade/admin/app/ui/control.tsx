@@ -6,7 +6,7 @@ import {
   ExternalLink, Eye, EyeOff, Gamepad2, Gem, LayoutDashboard, Link2,
   LoaderCircle, LogOut, Menu, MessageSquare, MoreHorizontal, RefreshCw,
   Save, Search, Settings2, Shield, ShieldCheck, SlidersHorizontal, Users,
-  Wallet, X, XCircle, Trophy, Globe, Send, Plus, Gift, Sparkles
+  Wallet, X, XCircle, Trophy, Globe, Send, Plus, Gift, Sparkles, Zap
 } from "lucide-react";
 
 type Plan = {
@@ -111,6 +111,7 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
 
   const nav = [
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
+    { id: "claim_transfers", label: "Duyệt xu Claim", icon: Zap },
     { id: "conversions", label: "Duyệt đổi xu ($)", icon: RefreshCw },
     { id: "payouts", label: "Rút tiền Payoneer", icon: ArrowUpRight },
     { id: "plans", label: "Gói thành viên", icon: Crown },
@@ -782,6 +783,94 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                       </div>
                     ) : (
                       <Empty message="Chưa có yêu cầu quy đổi xu nào." />
+                    )}
+                  </section>
+                </>
+              )}
+
+              {/* CLAIM COIN TO GAMING COIN TRANSFERS APPROVAL */}
+              {page === "claim_transfers" && (
+                <>
+                  <div className="mini-stats">
+                    <div><span>Chờ duyệt</span><strong>{(data.claimTransfers || []).filter((c: any) => c.status === "pending").length}</strong></div>
+                    <div><span>Xu Claim chờ chuyển</span><strong style={{ color: "#ffd700" }}>{num((data.claimTransfers || []).filter((c: any) => c.status === "pending").reduce((a: number, c: any) => a + c.coins, 0))} xu</strong></div>
+                    <div><span>Đã duyệt cộng Ví Xu</span><strong style={{ color: "var(--lime)" }}>{(data.claimTransfers || []).filter((c: any) => c.status === "approved").length} lệnh</strong></div>
+                  </div>
+                  <section className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>Duyệt chuyển xu từ Ví Claim sang Ví Xu</h2>
+                        <p>Người chơi đạt Cấp 10+ tích lũy xu từ Máy Claim tự động và yêu cầu chuyển sang Ví Xu chơi game (Tối thiểu 1.000 xu, tối đa 50.000 xu/lần).</p>
+                      </div>
+                      <SearchBox query={query} setQuery={setQuery} />
+                    </div>
+                    {(data.claimTransfers || []).filter(search).length ? (
+                      <div className="table-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Thời gian / Mã lệnh</th>
+                              <th>Người chơi</th>
+                              <th>Cấp độ</th>
+                              <th>Số xu yêu cầu chuyển</th>
+                              <th>Nguồn & Đích</th>
+                              <th>Trạng thái</th>
+                              <th>Xử lý</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(data.claimTransfers || []).filter(search).map((c: any) => (
+                              <tr key={c.id}>
+                                <td>
+                                  <strong>#{c.id.slice(0, 8)}</strong>
+                                  <small>{date(c.created_at)}</small>
+                                </td>
+                                <td>
+                                  <strong>{c.user_name || "Người chơi"}</strong>
+                                  <small>{c.user_email}</small>
+                                </td>
+                                <td><span className="pill">Lv.{c.user_level || 10}</span></td>
+                                <td><strong style={{ color: "#ffd700", fontSize: "1.05em" }}>+{num(c.coins)} xu</strong></td>
+                                <td><span className="pill">Ví Claim → Ví Xu</span></td>
+                                <td><Badge value={c.status} /></td>
+                                <td>
+                                  {c.status === "pending" ? (
+                                    <div className="row-actions">
+                                      <button
+                                        className="btn tiny lime"
+                                        disabled={busy}
+                                        onClick={async () => {
+                                          if (window.confirm(`Xác nhận DUYỆT chuyển ${num(c.coins)} xu từ Ví Claim sang Ví Xu cho ${c.user_email}?`)) {
+                                            await run("claim.transfer_decision", { id: c.id, decision: "approve" }, "Đã duyệt chuyển xu Claim sang Ví Xu thành công!");
+                                          }
+                                        }}
+                                      >
+                                        Duyệt chuyển
+                                      </button>
+                                      <button
+                                        className="text-button danger"
+                                        disabled={busy}
+                                        onClick={async () => {
+                                          const reason = window.prompt("Lý do từ chối (xu sẽ hoàn trả lại Ví Claim):", "Không đủ điều kiện chuyển xu");
+                                          if (reason !== null) {
+                                            await run("claim.transfer_decision", { id: c.id, decision: "reject", note: reason }, "Đã từ chối và hoàn trả lại Ví Claim.");
+                                          }
+                                        }}
+                                      >
+                                        Từ chối
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <small style={{ color: "var(--muted)" }}>{c.admin_note || "Đã xử lý"}</small>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <Empty message="Chưa có yêu cầu chuyển xu Claim nào." />
                     )}
                   </section>
                 </>

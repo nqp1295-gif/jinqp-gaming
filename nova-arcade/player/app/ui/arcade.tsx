@@ -257,7 +257,7 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
         const g = data?.games.find(x => x.id === tr.game_id);
         if (g) setSelectedGame(g);
       }
-    } else if (["explore", "tournaments", "favorites", "wallet", "membership", "settings", "help"].includes(root)) {
+    } else if (["explore", "tournaments", "claim", "favorites", "wallet", "membership", "settings", "help"].includes(root)) {
       setPage(root);
       if (root !== "tournaments") setActiveTournament(null);
     }
@@ -434,6 +434,7 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
   const nav = [
     { id: "explore", icon: Compass, label: t("navExplore") },
     { id: "tournaments", icon: Trophy, label: t("navTournaments") },
+    { id: "claim", icon: Zap, label: t("navClaim") },
     { id: "favorites", icon: Heart, label: t("navFavorites") },
     { id: "wallet", icon: Wallet, label: t("navWallet") },
     { id: "membership", icon: Crown, label: t("navMembership") },
@@ -475,6 +476,7 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
             <button key={n.id} className={`nav-item ${page === n.id ? "active" : ""}`} onClick={() => navigate(n.id)}>
               <n.icon size={20} />{n.label}
               {n.id === "tournaments" && <span className="new-dot" style={{ background: "var(--lime)" }} />}
+              {n.id === "claim" && <span className="new-dot" style={{ background: "#ffd700", boxShadow: "0 0 8px #ffd700" }} />}
               {n.id === "membership" && <span className="new-dot" />}
             </button>
           ))}
@@ -884,6 +886,17 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
                     <div><span>03</span><h3>Theo dõi trong ví</h3><p>Xem xu đã nhận, lịch sử và tỷ lệ quy đổi.</p></div>
                   </div>
                 </section>
+              )}
+
+              {page === "claim" && (
+                <ClaimPage
+                  data={data}
+                  reload={reload}
+                  notify={setToast}
+                  navigate={navigate}
+                  openAuth={openAuth}
+                  openRefill={openRefill}
+                />
               )}
 
               {page === "wallet" && (
@@ -3392,6 +3405,616 @@ function HelpPage({ data, notify, reload }: {
             </div>
           ))}
         </div>
+      )}
+    </section>
+  );
+}
+
+// -------------------------------------------------------------
+// CLAIM XU PAGE (Máy Đào Năng Lượng & Ví Claim)
+// -------------------------------------------------------------
+
+const CLAIM_MACHINES_LIST = [
+  { level: 1, reqLevel: 10, ratePerHour: 10, name: "Máy Cấp 1", tag: "10 xu/h", desc: "Máy sơ cấp năng lượng lượng tử" },
+  { level: 2, reqLevel: 20, ratePerHour: 30, name: "Máy Cấp 2", tag: "30 xu/h", desc: "Máy tăng áp nhịp xung điện từ" },
+  { level: 3, reqLevel: 30, ratePerHour: 50, name: "Máy Cấp 3", tag: "50 xu/h", desc: "Máy lõi điện tử Cyber Core" },
+  { level: 4, reqLevel: 40, ratePerHour: 100, name: "Máy Cấp 4", tag: "100 xu/h", desc: "Máy gia tốc hạt Hyper Drive" },
+  { level: 5, reqLevel: 50, ratePerHour: 150, name: "Máy Cấp 5", tag: "150 xu/h", desc: "Máy hút năng lượng Quantum Vault" },
+  { level: 6, reqLevel: 60, ratePerHour: 220, name: "Máy Cấp 6", tag: "220 xu/h", desc: "Máy bão xoáy Vortex Prime" },
+  { level: 7, reqLevel: 70, ratePerHour: 300, name: "Máy Cấp 7", tag: "300 xu/h", desc: "Máy bức xạ mặt trời Solar Flare" },
+  { level: 8, reqLevel: 80, ratePerHour: 400, name: "Máy Cấp 8", tag: "400 xu/h", desc: "Máy lò phản ứng Nova Reactor" },
+  { level: 9, reqLevel: 90, ratePerHour: 600, name: "Máy Cấp 9", tag: "600 xu/h", desc: "Máy ma trận ngân hà Galactic Matrix" },
+  { level: 10, reqLevel: 100, ratePerHour: 1000, name: "Máy Cấp 10", tag: "1000 xu/h", desc: "Máy quyền năng tối thượng Infinity Lord" },
+];
+
+function ClaimPage({
+  data,
+  reload,
+  notify,
+  navigate,
+  openAuth,
+  openRefill,
+}: {
+  data: Data | null;
+  reload: () => Promise<any>;
+  notify: (s: string) => void;
+  navigate: (s: string) => void;
+  openAuth: (mode?: "login" | "signup") => void;
+  openRefill: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferAmountInput, setTransferAmountInput] = useState("1000");
+
+  const user = data?.user;
+  const userLevel = user?.level || 1;
+  const isEligible = userLevel >= 10;
+
+  const claimState = user?.claim;
+  const claimWallet = claimState?.claimWallet || { balance: 0, held: 0 };
+  const activeSession = claimState?.activeSession;
+  const transfers = claimState?.transfers || [];
+  const machines = data?.claimMachines || CLAIM_MACHINES_LIST;
+
+  const highestUnlocked = Math.min(10, Math.max(1, Math.floor(userLevel / 10)));
+  const [selectedMachine, setSelectedMachine] = useState<number>(() => {
+    return activeSession?.machineLevel || highestUnlocked;
+  });
+
+  // Ticker states (real-time countdown & coin production)
+  const [liveCoins, setLiveCoins] = useState<number>(0);
+  const [timeLeftSec, setTimeLeftSec] = useState<number>(0);
+
+  // Sync real-time continuous ticker (5 decimal places: 0,00000)
+  useEffect(() => {
+    if (!activeSession || activeSession.status !== "running") {
+      setLiveCoins(activeSession ? Number(activeSession.coinsCollected || 0) : 0);
+      setTimeLeftSec(0);
+      return;
+    }
+
+    const updateTicker = () => {
+      const now = Date.now();
+      const started = activeSession.startedAt;
+      const ends = activeSession.endsAt;
+      const rate = activeSession.ratePerHour || 10;
+
+      const elapsedMs = Math.max(0, Math.min(3600000, now - started));
+      const currentEarned = (elapsedMs / 3600000) * rate;
+      setLiveCoins(currentEarned);
+
+      const remainingSec = Math.max(0, Math.ceil((ends - now) / 1000));
+      setTimeLeftSec(remainingSec);
+
+      if (remainingSec === 0 && activeSession.isRunning) {
+        reload();
+      }
+    };
+
+    updateTicker();
+    const interval = setInterval(updateTicker, 50);
+    return () => clearInterval(interval);
+  }, [activeSession?.id, activeSession?.status, activeSession?.startedAt, activeSession?.endsAt]);
+
+  const handleStart = async (machineLvl?: number) => {
+    if (!user) {
+      openAuth("login");
+      return;
+    }
+    if (userLevel < 10) {
+      notify("Bạn cần đạt tối thiểu Cấp 10 để mở khóa tính năng Claim xu.");
+      return;
+    }
+    const targetLvl = machineLvl || selectedMachine;
+    setBusy(true);
+    try {
+      await action("claim.start", { machineLevel: targetLvl });
+      await reload();
+      notify(`⚡ Đã bật Máy Cấp ${targetLvl}! Máy sẽ hoạt động liên tục trong 1 giờ.`);
+    } catch (e: any) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleHarvest = async () => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      await action("claim.harvest", {});
+      await reload();
+      notify("📥 Đã thu hoạch thành công số xu vào Ví Claim!");
+    } catch (e: any) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTransferToWallet = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(transferAmountInput);
+    if (isNaN(amt) || amt < 1000) {
+      notify("Số xu chuyển tối thiểu là 1.000 xu.");
+      return;
+    }
+    if (amt > 50000) {
+      notify("Mỗi lần chuyển tối đa 50.000 xu.");
+      return;
+    }
+    if (amt > claimWallet.balance) {
+      notify("Số dư trong Ví Claim không đủ.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await action("claim.transfer_to_wallet", {
+        coins: amt,
+        requestKey: crypto.randomUUID()
+      });
+      await reload();
+      setShowTransferModal(false);
+      notify(`Đã tạo lệnh chuyển ${new Intl.NumberFormat("vi-VN").format(amt)} xu sang Ví Xu! Ban Quản Trị sẽ duyệt trong thời gian sớm nhất.`);
+    } catch (e: any) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Format ticker numbers: integer and 5 decimal places
+  const integerPart = Math.floor(liveCoins);
+  const decimalPart = (liveCoins % 1).toFixed(5).slice(2);
+
+  // Time formatter MM:SS
+  const mm = String(Math.floor(timeLeftSec / 60)).padStart(2, "0");
+  const ss = String(timeLeftSec % 60).padStart(2, "0");
+
+  const isRunning = activeSession?.status === "running" && timeLeftSec > 0;
+  const isFinished = activeSession && (activeSession.status === "stopped" || timeLeftSec === 0);
+
+  const selectedMachineInfo = machines.find((m: any) => m.level === selectedMachine) || machines[0];
+
+  return (
+    <section className="claim-page">
+      <div className="section-heading" style={{ marginBottom: 24, textAlign: "center" }}>
+        <div>
+          <span className="eyebrow" style={{ color: "#ffd700", justifyContent: "center" }}>
+            <Zap size={15} fill="#ffd700" /> MÁY CLAIM XU TỰ ĐỘNG
+          </span>
+          <h1 style={{ fontSize: "2.3rem", marginTop: 4 }}>
+            Khai thác năng lượng · <em>Tích lũy xu mỗi giờ</em>
+          </h1>
+          <p style={{ color: "var(--muted)", maxWidth: 640, margin: "8px auto 0" }}>
+            Mở khóa từ Cấp 10. Cứ mỗi 10 cấp tăng thêm sẽ mở khóa Máy Claim cấp cao hơn. Máy hoạt động tối đa 1 giờ mỗi phiên và tự động dừng.
+          </p>
+        </div>
+      </div>
+
+      {/* CASE 1: USER NOT SIGNED IN */}
+      {!user && (
+        <div className="claim-locked-banner">
+          <div style={{ display: "inline-flex", padding: 16, borderRadius: "50%", background: "rgba(255, 215, 0, 0.15)", marginBottom: 16 }}>
+            <Lock size={36} color="#ffd700" />
+          </div>
+          <h2 style={{ fontSize: "1.6rem", marginBottom: 8 }}>Vui lòng đăng nhập để tham gia</h2>
+          <p style={{ color: "var(--muted)", marginBottom: 24 }}>
+            Đăng nhập tài khoản JINQP để kích hoạt máy claim xu, nhận năng lượng và chuyển đổi số dư.
+          </p>
+          <button className="btn lime large" onClick={() => openAuth("login")}>
+            <LogIn size={18} /> Đăng nhập ngay
+          </button>
+        </div>
+      )}
+
+      {/* CASE 2: USER LEVEL < 10 (LOCKED) */}
+      {user && !isEligible && (
+        <div className="claim-locked-banner">
+          <div style={{ display: "inline-flex", padding: 16, borderRadius: "50%", background: "rgba(239, 68, 68, 0.15)", marginBottom: 16 }}>
+            <Lock size={36} color="#ef4444" />
+          </div>
+          <h2 style={{ fontSize: "1.6rem", marginBottom: 8 }}>Yêu cầu đạt Cấp 10 để mở khóa</h2>
+          <p style={{ color: "var(--muted)", maxWidth: 520, margin: "0 auto 20px" }}>
+            Tính năng Máy Claim Xu năng lượng yêu cầu tài khoản đạt tối thiểu <strong>Cấp 10</strong>. Hiện tại tài khoản của bạn đang ở <strong>Cấp {userLevel}</strong>.
+          </p>
+
+          <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "16px 20px", maxWidth: 420, margin: "0 auto 24px", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
+              <span>Tiến độ mở khóa</span>
+              <strong style={{ color: "#ffd700" }}>Cấp {userLevel} / Cấp 10 ({Math.min(100, Math.floor((userLevel / 10) * 100))}%)</strong>
+            </div>
+            <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 999, overflow: "hidden" }}>
+              <div style={{ width: `${Math.min(100, Math.floor((userLevel / 10) * 100))}%`, height: "100%", background: "linear-gradient(90deg, #ffd700, #ff8c00)", borderRadius: 999 }} />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <button className="btn lime" onClick={() => navigate("explore")}>
+              <Play size={16} fill="currentColor" /> Chơi game tăng cấp
+            </button>
+            <button className="btn secondary" onClick={openRefill}>
+              <Sparkles size={16} /> Nạp xu mở mốc cấp độ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CASE 3: USER LEVEL >= 10 (ACTIVE CLAIM INTERFACE) */}
+      {user && isEligible && (
+        <>
+          {/* MAIN CLAIM HERO WITH GOLDEN CIRCLE & TICKER */}
+          <div className="claim-hero">
+            {/* ACTIVE MACHINE BADGE */}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 999, background: "rgba(255, 215, 0, 0.12)", border: "1px solid rgba(255, 215, 0, 0.3)", color: "#ffd700", fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
+              <Sparkles size={14} /> {selectedMachineInfo.name} · Tốc độ: {selectedMachineInfo.ratePerHour} xu/h
+            </div>
+
+            {/* GOLDEN CIRCLE WITH LIGHTNING BOLT IN THE CENTER */}
+            <div className="claim-circle-wrapper">
+              <div className="claim-circle-halo" />
+              <div
+                className={`claim-circle ${isRunning ? "is-running" : ""}`}
+                onClick={() => {
+                  if (!isRunning) handleStart();
+                }}
+                title={isRunning ? "Đang khai thác năng lượng" : "Bấm để bật máy"}
+              >
+                <Zap size={64} className="claim-circle-bolt" fill="#ffd700" />
+              </div>
+            </div>
+
+            {/* REAL-TIME CONTINUOUS TICKER FROM 0,00000 */}
+            <div className="claim-ticker-box">
+              <span className="claim-ticker-label">
+                {isRunning ? "Số xu đang sản sinh trực tiếp" : "Số xu phiên hiện tại"}
+              </span>
+              <div className="claim-ticker-digits">
+                <span>{integerPart}</span>
+                <span className="claim-ticker-decimals">.{decimalPart}</span>
+                <span className="claim-ticker-unit">xu</span>
+              </div>
+            </div>
+
+            {/* 1-HOUR COUNTDOWN TIMER & STATUS */}
+            {isRunning ? (
+              <div className="claim-timer-pill">
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80" }} />
+                <span>Đang khai thác: <strong>{mm}:{ss}</strong> còn lại (Phiên 1 giờ)</span>
+              </div>
+            ) : isFinished ? (
+              <div className="claim-timer-pill stopped">
+                <Clock3 size={15} />
+                <span>Phiên 1 giờ đã dừng · Bấm nút bên dưới để bật tiếp</span>
+              </div>
+            ) : (
+              <div className="claim-timer-pill stopped">
+                <Clock3 size={15} />
+                <span>Máy đang tạm dừng · Sẵn sàng khởi động phiên 1 giờ</span>
+              </div>
+            )}
+
+            {/* HERO ACTION BUTTONS */}
+            <div className="claim-hero-actions">
+              {!isRunning ? (
+                <button
+                  className="btn lime large"
+                  disabled={busy}
+                  onClick={() => handleStart()}
+                  style={{ minWidth: 220, padding: "14px 28px", fontSize: "1.05rem", fontWeight: 700 }}
+                >
+                  {busy ? <Spinner /> : <Zap size={18} fill="currentColor" />} Bật Máy Claim (1 Giờ)
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="btn secondary"
+                    disabled={busy || liveCoins <= 0}
+                    onClick={handleHarvest}
+                    style={{ padding: "12px 24px" }}
+                  >
+                    {busy ? <Spinner /> : <Check size={16} />} Thu hoạch xu vào Ví Claim
+                  </button>
+                  <button
+                    className="btn lime"
+                    disabled={true}
+                    style={{ opacity: 0.9, padding: "12px 24px", cursor: "default" }}
+                  >
+                    ⚡ Đang chạy ({mm}:{ss})
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* WALLET SUMMARY CARDS */}
+          <div className="claim-wallet-grid">
+            {/* CARD 1: VÍ CLAIM */}
+            <div className="claim-wallet-card gold-accent">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <span style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700 }}>
+                    VÍ CLAIM (CLAIM COINS)
+                  </span>
+                  <div style={{ fontSize: "2rem", fontWeight: 800, color: "#ffd700", marginTop: 4 }}>
+                    {new Intl.NumberFormat("vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 5 }).format(claimWallet.balance)} <small style={{ fontSize: "1rem" }}>xu</small>
+                  </div>
+                </div>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(255, 215, 0, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffd700" }}>
+                  <Coins size={22} />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--muted)", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 12, marginBottom: 16 }}>
+                <span>Đang chờ Admin duyệt:</span>
+                <strong style={{ color: "var(--amber)" }}>{new Intl.NumberFormat("vi-VN").format(claimWallet.held)} xu</strong>
+              </div>
+
+              {/* TRANSFER BUTTON (ENABLED ONLY WHEN >= 1000 XU) */}
+              <button
+                className="btn lime full"
+                disabled={busy || claimWallet.balance < 1000}
+                onClick={() => {
+                  setTransferAmountInput("1000");
+                  setShowTransferModal(true);
+                }}
+                style={{ padding: "12px 16px" }}
+              >
+                <ArrowRight size={16} /> Chuyển sang Ví Xu
+              </button>
+
+              {claimWallet.balance < 1000 && (
+                <small style={{ color: "var(--muted)", fontSize: 11, display: "block", marginTop: 8, textAlign: "center" }}>
+                  ⚠️ Đủ 1.000 xu claim mới mở nút chuyển sang Ví xu
+                </small>
+              )}
+            </div>
+
+            {/* CARD 2: VÍ XU KHẢ DỤNG (GAMING COINS) */}
+            <div className="claim-wallet-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <span style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700 }}>
+                    VÍ XU CHƠI GAME (AVAILABLE)
+                  </span>
+                  <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--text)", marginTop: 4 }}>
+                    {new Intl.NumberFormat("vi-VN").format(data?.user?.availableCoins || 0)} <small style={{ fontSize: "1rem" }}>xu</small>
+                  </div>
+                </div>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(163, 230, 53, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--lime)" }}>
+                  <Wallet size={22} />
+                </div>
+              </div>
+
+              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+                Xu trong Ví Xu có thể dùng để chơi 50 tựa game, thi đấu đấu trường kỹ năng hoặc quy đổi sang Ví Chính ($).
+              </p>
+
+              <button className="btn secondary full" onClick={() => navigate("wallet")} style={{ padding: "12px 16px" }}>
+                Quản lý Ví Người Dùng <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 10 MINING RIG TIERS */}
+      <section className="panel" style={{ marginTop: 24 }}>
+        <div className="panel-heading">
+          <div>
+            <h2>Danh sách 10 Cấp Máy Claim</h2>
+            <p>Từ Cấp 10, cứ mỗi 10 cấp đạt được sẽ mở khóa Máy Claim cấp cao hơn với tốc độ khai thác lớn hơn.</p>
+          </div>
+          <span className="pill">Cấp hiện tại: Cấp {userLevel}</span>
+        </div>
+
+        <div className="claim-machines-grid">
+          {machines.map((m: any) => {
+            const isUnlocked = userLevel >= m.reqLevel;
+            const isSelected = selectedMachine === m.level;
+            const isCurrentlyMining = isRunning && activeSession?.machineLevel === m.level;
+
+            return (
+              <div
+                key={m.level}
+                className={`claim-machine-card ${isSelected ? "selected" : ""} ${!isUnlocked ? "locked" : ""}`}
+                onClick={() => {
+                  if (isUnlocked) {
+                    setSelectedMachine(m.level);
+                    if (!isRunning) {
+                      notify(`Đã chọn ${m.name} (${m.ratePerHour} xu/h). Bấm "Bật Máy Claim" để bắt đầu!`);
+                    }
+                  } else {
+                    notify(`Máy Cấp ${m.level} yêu cầu tài khoản đạt Cấp ${m.reqLevel}. Hãy tiếp tục chơi game để nâng cấp!`);
+                  }
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#ffd700" }}>CẤP {m.level}</span>
+                    {isCurrentlyMining ? (
+                      <span className="pill" style={{ background: "rgba(34, 197, 94, 0.2)", color: "#4ade80", fontSize: 10, border: "1px solid rgba(34, 197, 94, 0.4)" }}>
+                        ⚡ Đang chạy
+                      </span>
+                    ) : isUnlocked ? (
+                      <span className="pill" style={{ fontSize: 10 }}>Đã mở</span>
+                    ) : (
+                      <span className="pill" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#f87171", fontSize: 10 }}>
+                        <Lock size={10} style={{ display: "inline", marginRight: 2 }} /> Cấp {m.reqLevel}
+                      </span>
+                    )}
+                  </div>
+                  <h3 style={{ fontSize: "1.1rem", marginBottom: 4 }}>{m.name}</h3>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#ffd700", marginBottom: 4 }}>
+                    {m.ratePerHour} <small style={{ fontSize: "0.8rem", color: "var(--muted)" }}>xu/h</small>
+                  </div>
+                  <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.4 }}>{m.desc}</p>
+                </div>
+
+                <div style={{ marginTop: 14, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  {isUnlocked ? (
+                    <button
+                      className={`btn tiny full ${isSelected ? "lime" : "secondary"}`}
+                      disabled={busy}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedMachine(m.level);
+                        if (!isRunning) handleStart(m.level);
+                      }}
+                    >
+                      {isCurrentlyMining ? "Đang khai thác" : isSelected ? "Đang chọn" : "Chọn máy này"}
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
+                      Mở khóa ở Cấp {m.reqLevel}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* CLAIM TRANSFER HISTORY TABLE */}
+      {user && isEligible && (
+        <section className="panel" style={{ marginTop: 24 }}>
+          <div className="panel-heading">
+            <div>
+              <h2>Lịch sử lệnh chuyển xu Claim sang Ví Xu</h2>
+              <p>Mỗi lần chuyển tối thiểu 1.000 xu, tối đa 50.000 xu và cần Ban Quản Trị phê duyệt.</p>
+            </div>
+            <button className="text-button" onClick={() => reload()}>
+              <RefreshCw size={14} /> Làm mới
+            </button>
+          </div>
+
+          {transfers.length === 0 ? (
+            <div className="empty-state" style={{ padding: 32 }}>
+              <Coins size={36} color="var(--muted)" />
+              <h3>Chưa có lệnh chuyển xu Claim nào</h3>
+              <p>Khi bạn tích lũy đủ 1.000 xu trong Ví Claim, bạn có thể tạo lệnh chuyển sang Ví Xu tại đây.</p>
+            </div>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã lệnh / Thời gian</th>
+                    <th>Số xu chuyển</th>
+                    <th>Nguồn & Đích</th>
+                    <th>Trạng thái</th>
+                    <th>Ghi chú BQT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transfers.map((t: any) => (
+                    <tr key={t.id}>
+                      <td>
+                        <strong>#{t.id.slice(0, 8)}</strong>
+                        <small>{date(t.created_at)}</small>
+                      </td>
+                      <td>
+                        <strong style={{ color: "#ffd700", fontSize: "1.1em" }}>
+                          +{new Intl.NumberFormat("vi-VN").format(t.coins)} xu
+                        </strong>
+                      </td>
+                      <td>
+                        <span className="pill">Ví Claim → Ví Xu</span>
+                      </td>
+                      <td>
+                        {t.status === "pending" && <span className="status pending">Chờ Admin duyệt</span>}
+                        {t.status === "approved" && <span className="status paid">Đã duyệt cộng xu</span>}
+                        {t.status === "rejected" && <span className="status rejected">Bị từ chối</span>}
+                      </td>
+                      <td>
+                        <small style={{ color: "var(--muted)" }}>{t.admin_note || "Đang xử lý đối soát"}</small>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* MODAL: TRANSFER COINS FROM CLAIM WALLET TO COIN WALLET */}
+      {showTransferModal && (
+        <Modal title="Chuyển xu từ Ví Claim sang Ví Xu" onClose={() => setShowTransferModal(false)}>
+          <form className="checkout-body" onSubmit={handleTransferToWallet}>
+            <div className="card-callout" style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "var(--muted)" }}>Số dư khả dụng Ví Claim:</span>
+                <strong style={{ color: "#ffd700" }}>{new Intl.NumberFormat("vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 5 }).format(claimWallet.balance)} xu</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--muted)" }}>
+                <span>Hạn mức mỗi lần chuyển:</span>
+                <span>Từ 1.000 đến 50.000 xu</span>
+              </div>
+            </div>
+
+            <label>
+              Số xu muốn chuyển sang Ví Xu
+              <div className="input-with-unit" style={{ marginTop: 6 }}>
+                <input
+                  required
+                  type="number"
+                  min="1000"
+                  max={Math.min(50000, Math.floor(claimWallet.balance))}
+                  step="1"
+                  value={transferAmountInput}
+                  onChange={(e) => setTransferAmountInput(e.target.value)}
+                  placeholder="1000"
+                />
+                <span>xu</span>
+              </div>
+            </label>
+
+            <div className="quick-amounts" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              {[1000, 5000, 10000, 50000].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  className="btn secondary tiny"
+                  disabled={v > claimWallet.balance}
+                  onClick={() => setTransferAmountInput(String(Math.min(v, Math.floor(claimWallet.balance))))}
+                >
+                  {new Intl.NumberFormat("vi-VN").format(v)} xu
+                </button>
+              ))}
+              <button
+                type="button"
+                className="btn secondary tiny"
+                onClick={() => setTransferAmountInput(String(Math.min(50000, Math.floor(claimWallet.balance))))}
+              >
+                Tối đa
+              </button>
+            </div>
+
+            <div className="checkout-summary" style={{ marginTop: 20 }}>
+              <span>Số xu chuyển</span>
+              <strong>{new Intl.NumberFormat("vi-VN").format(Number(transferAmountInput) || 0)} xu</strong>
+              <span>Phí chuyển</span>
+              <strong style={{ color: "var(--lime)" }}>0% Miễn phí</strong>
+              <span>Đích đến</span>
+              <span>Ví Xu (Khả dụng chơi game)</span>
+              <span>Quy trình duyệt</span>
+              <span style={{ color: "var(--amber)", fontSize: "0.85rem" }}>Chờ Ban Quản Trị phê duyệt</span>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <button
+                className="btn lime full"
+                type="submit"
+                disabled={busy || Number(transferAmountInput) < 1000 || Number(transferAmountInput) > 50000 || Number(transferAmountInput) > claimWallet.balance}
+              >
+                {busy ? <Spinner /> : <ArrowRight size={18} />} Xác nhận tạo lệnh chuyển xu
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </section>
   );

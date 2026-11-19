@@ -209,6 +209,21 @@ export async function seed(db) {
       usd_cents integer NOT NULL, rate integer NOT NULL, status text DEFAULT 'pending' NOT NULL,
       request_key text NOT NULL, admin_note text, created_at integer NOT NULL, settled_at integer
     );`,
+    `CREATE TABLE IF NOT EXISTS claim_wallets (
+      user_id text PRIMARY KEY, balance real DEFAULT 0 NOT NULL,
+      held real DEFAULT 0 NOT NULL, updated_at integer NOT NULL
+    );`,
+    `CREATE TABLE IF NOT EXISTS claim_sessions (
+      id text PRIMARY KEY, user_id text NOT NULL, machine_level integer NOT NULL,
+      rate_per_hour real NOT NULL, started_at integer NOT NULL, ends_at integer NOT NULL,
+      last_collected_at integer NOT NULL, coins_collected real DEFAULT 0 NOT NULL,
+      status text DEFAULT 'running' NOT NULL, created_at integer NOT NULL, updated_at integer NOT NULL
+    );`,
+    `CREATE TABLE IF NOT EXISTS claim_transfers (
+      id text PRIMARY KEY, user_id text NOT NULL, coins integer NOT NULL,
+      status text DEFAULT 'pending' NOT NULL, request_key text NOT NULL,
+      admin_note text, created_at integer NOT NULL, settled_at integer
+    );`,
   ];
 
   for (const q of createStatements) {
@@ -346,6 +361,7 @@ export async function seed(db) {
     ["system:usd_reserve", "USD_CENT"],
     ["system:coin_conversions", "COIN"],
     ["system:withdrawal_fees", "USD_CENT"],
+    ["system:claim_mining", "COIN"],
   ]) {
     commands.push(stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,NULL,'system',?,0) ON CONFLICT(id) DO NOTHING", [a, unit]));
   }
@@ -403,6 +419,7 @@ export async function ensureUser(db, user, now = Date.now()) {
     stmt(db, "INSERT INTO app_users (id,name,email,country,banned,created_at,play_time_seconds,total_coins_bought,level) VALUES (?,?,?,'VN',0,?,0,0,1) ON CONFLICT(id) DO UPDATE SET name=COALESCE(excluded.name, app_users.name),email=COALESCE(excluded.email, app_users.email)", [uid, userName, user.email || null, now]),
     ...["available", "held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'COIN',0) ON CONFLICT(id) DO NOTHING", [acc(uid, k), uid, k])),
     ...["main_usd", "main_usd_held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'USD_CENT',0) ON CONFLICT(id) DO NOTHING", [acc(uid, k), uid, k])),
+    stmt(db, "INSERT INTO claim_wallets (user_id, balance, held, updated_at) VALUES (?, 0, 0, ?) ON CONFLICT(user_id) DO NOTHING", [uid, now]),
   ]);
   const u = await one(db, "SELECT * FROM app_users WHERE id=?", [uid]);
   if (u.banned) throw new AppError("Tài khoản đang tạm khóa. Vui lòng liên hệ hỗ trợ.", 403);
@@ -663,9 +680,11 @@ export async function bootstrap(db, user) {
       WHERE l.account_id=? AND j.status='posted'
       ORDER BY j.created_at DESC LIMIT 50
     `, [acc(u.id)]),
-    tickets: await rows(db, "SELECT * FROM support_tickets WHERE user_id=? ORDER BY created_at DESC LIMIT 20", [u.id])
+    tickets: await rows(db, "SELECT * FROM support_tickets WHERE user_id=? ORDER BY created_at DESC LIMIT 20", [u.id]),
+    claim: await getClaimState(db, u.id, now)
   };
 
+  result.claimMachines = CLAIM_MACHINES;
   return result;
 }
 
@@ -1815,6 +1834,271 @@ export async function createGameReview(db, userId, input, now = Date.now()) {
 }
 
 // -------------------------
+// CLAIM XU (MINING MACHINES & CLAIM WALLET)
+// -------------------------
+
+export const CLAIM_MACHINES = [
+  { level: 1, reqLevel: 10, ratePerHour: 10, name: "Máy Cấp 1", tag: "10 xu/h", desc: "Máy sơ cấp năng lượng lượng tử" },
+  { level: 2, reqLevel: 20, ratePerHour: 30, name: "Máy Cấp 2", tag: "30 xu/h", desc: "Máy tăng áp nhịp xung điện từ" },
+  { level: 3, reqLevel: 30, ratePerHour: 50, name: "Máy Cấp 3", tag: "50 xu/h", desc: "Máy lõi điện tử Cyber Core" },
+  { level: 4, reqLevel: 40, ratePerHour: 100, name: "Máy Cấp 4", tag: "100 xu/h", desc: "Máy gia tốc hạt Hyper Drive" },
+  { level: 5, reqLevel: 50, ratePerHour: 150, name: "Máy Cấp 5", tag: "150 xu/h", desc: "Máy hút năng lượng Quantum Vault" },
+  { level: 6, reqLevel: 60, ratePerHour: 220, name: "Máy Cấp 6", tag: "220 xu/h", desc: "Máy bão xoáy Vortex Prime" },
+  { level: 7, reqLevel: 70, ratePerHour: 300, name: "Máy Cấp 7", tag: "300 xu/h", desc: "Máy bức xạ mặt trời Solar Flare" },
+  { level: 8, reqLevel: 80, ratePerHour: 400, name: "Máy Cấp 8", tag: "400 xu/h", desc: "Máy lò phản ứng Nova Reactor" },
+  { level: 9, reqLevel: 90, ratePerHour: 600, name: "Máy Cấp 9", tag: "600 xu/h", desc: "Máy ma trận ngân hà Galactic Matrix" },
+  { level: 10, reqLevel: 100, ratePerHour: 1000, name: "Máy Cấp 10", tag: "1000 xu/h", desc: "Máy quyền năng tối thượng Infinity Lord" },
+];
+
+export async function getClaimState(db, userId, now = Date.now()) {
+  await checkAndProcessLevelUp(db, userId, now);
+  const u = await one(db, "SELECT * FROM app_users WHERE id=?", [userId]);
+  if (!u) throw new AppError("Người dùng không tồn tại.", 404);
+
+  const lvlInfo = computeLevelInfo(u.play_time_seconds || 0, u.total_coins_bought || 0);
+  const userLevel = lvlInfo.level;
+
+  let cw = await one(db, "SELECT * FROM claim_wallets WHERE user_id=?", [userId]);
+  if (!cw) {
+    await stmt(db, "INSERT INTO claim_wallets (user_id, balance, held, updated_at) VALUES (?, 0, 0, ?)", [userId, now]).run();
+    cw = { user_id: userId, balance: 0, held: 0, updated_at: now };
+  }
+
+  let session = await one(db, "SELECT * FROM claim_sessions WHERE user_id=? ORDER BY started_at DESC LIMIT 1", [userId]);
+  let uncollected = 0;
+  let isRunning = false;
+  let timeLeftSec = 0;
+
+  if (session && session.status === "running") {
+    const effectiveTime = Math.min(now, session.ends_at);
+    const durationMs = Math.max(0, effectiveTime - session.last_collected_at);
+    uncollected = (durationMs / 3600000) * session.rate_per_hour;
+
+    if (now >= session.ends_at) {
+      // Auto-stop after 1h!
+      const totalSessionEarned = Number(((session.coins_collected || 0) + uncollected).toFixed(5));
+      const newBal = Number(((cw.balance || 0) + uncollected).toFixed(5));
+      await db.batch([
+        stmt(db, "UPDATE claim_wallets SET balance=?, updated_at=? WHERE user_id=?", [newBal, now, userId]),
+        stmt(db, "UPDATE claim_sessions SET coins_collected=?, last_collected_at=?, status='stopped', updated_at=? WHERE id=?", [
+          totalSessionEarned, session.ends_at, now, session.id
+        ])
+      ]);
+      cw.balance = newBal;
+      session.coins_collected = totalSessionEarned;
+      session.last_collected_at = session.ends_at;
+      session.status = "stopped";
+      uncollected = 0;
+      isRunning = false;
+      timeLeftSec = 0;
+    } else {
+      isRunning = true;
+      timeLeftSec = Math.max(0, Math.ceil((session.ends_at - now) / 1000));
+    }
+  }
+
+  const claimTransfers = await rows(db, "SELECT * FROM claim_transfers WHERE user_id=? ORDER BY created_at DESC LIMIT 30", [userId]);
+
+  return {
+    userLevel,
+    isEligible: userLevel >= 10,
+    claimWallet: {
+      balance: Number((cw.balance || 0).toFixed(5)),
+      held: Number((cw.held || 0).toFixed(5)),
+    },
+    activeSession: session ? {
+      id: session.id,
+      machineLevel: session.machine_level,
+      ratePerHour: session.rate_per_hour,
+      startedAt: session.started_at,
+      endsAt: session.ends_at,
+      lastCollectedAt: session.last_collected_at,
+      coinsCollected: Number((session.coins_collected || 0).toFixed(5)),
+      status: session.status,
+      isRunning,
+      timeLeftSec,
+      uncollectedCoins: Number(uncollected.toFixed(5)),
+    } : null,
+    transfers: claimTransfers,
+    machines: CLAIM_MACHINES.map(m => ({
+      ...m,
+      unlocked: userLevel >= m.reqLevel,
+      current: session?.machine_level === m.level && isRunning
+    }))
+  };
+}
+
+export async function startClaimSession(db, userId, input = {}, now = Date.now()) {
+  await checkAndProcessLevelUp(db, userId, now);
+  const u = await one(db, "SELECT * FROM app_users WHERE id=?", [userId]);
+  if (!u) throw new AppError("Người dùng không tồn tại.", 404);
+
+  const lvlInfo = computeLevelInfo(u.play_time_seconds || 0, u.total_coins_bought || 0);
+  const userLevel = lvlInfo.level;
+  if (userLevel < 10) {
+    throw new AppError("Bạn cần đạt tối thiểu Cấp 10 để mở khóa tính năng Claim xu.", 403, "LEVEL_LOCKED");
+  }
+
+  const maxAllowedTier = Math.min(10, Math.floor(userLevel / 10));
+  const reqLvl = input.machineLevel ? Math.max(1, Math.min(10, Number(input.machineLevel))) : maxAllowedTier;
+  const machine = CLAIM_MACHINES.find(m => m.level === reqLvl);
+  if (!machine || userLevel < machine.reqLevel) {
+    throw new AppError(`Bạn cần đạt Cấp ${machine?.reqLevel || 10} để mở khóa ${machine?.name || 'máy này'}.`, 403);
+  }
+
+  let cw = await one(db, "SELECT * FROM claim_wallets WHERE user_id=?", [userId]);
+  if (!cw) {
+    await stmt(db, "INSERT INTO claim_wallets (user_id, balance, held, updated_at) VALUES (?, 0, 0, ?)", [userId, now]).run();
+    cw = { user_id: userId, balance: 0, held: 0, updated_at: now };
+  }
+
+  // Harvest any remaining coins from previous session if exists
+  const prevSession = await one(db, "SELECT * FROM claim_sessions WHERE user_id=? ORDER BY started_at DESC LIMIT 1", [userId]);
+  if (prevSession && prevSession.last_collected_at < prevSession.ends_at) {
+    const effectiveTime = Math.min(now, prevSession.ends_at);
+    const durationMs = Math.max(0, effectiveTime - prevSession.last_collected_at);
+    const uncollected = (durationMs / 3600000) * prevSession.rate_per_hour;
+    if (uncollected > 0) {
+      const newBal = Number(((cw.balance || 0) + uncollected).toFixed(5));
+      const newTotal = Number(((prevSession.coins_collected || 0) + uncollected).toFixed(5));
+      await db.batch([
+        stmt(db, "UPDATE claim_wallets SET balance=?, updated_at=? WHERE user_id=?", [newBal, now, userId]),
+        stmt(db, "UPDATE claim_sessions SET coins_collected=?, last_collected_at=?, status='stopped', updated_at=? WHERE id=?", [
+          newTotal, effectiveTime, now, prevSession.id
+        ])
+      ]);
+    } else {
+      await stmt(db, "UPDATE claim_sessions SET status='stopped', updated_at=? WHERE id=?", [now, prevSession.id]).run();
+    }
+  }
+
+  // Create new 1-hour session
+  const sid = id();
+  const endsAt = now + 3600 * 1000;
+  await stmt(db, `INSERT INTO claim_sessions (id, user_id, machine_level, rate_per_hour, started_at, ends_at, last_collected_at, coins_collected, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'running', ?, ?)`, [
+    sid, userId, machine.level, machine.ratePerHour, now, endsAt, now, now, now
+  ]).run();
+
+  return getClaimState(db, userId, now);
+}
+
+export async function harvestClaimSession(db, userId, now = Date.now()) {
+  let cw = await one(db, "SELECT * FROM claim_wallets WHERE user_id=?", [userId]);
+  if (!cw) {
+    await stmt(db, "INSERT INTO claim_wallets (user_id, balance, held, updated_at) VALUES (?, 0, 0, ?)", [userId, now]).run();
+    cw = { user_id: userId, balance: 0, held: 0, updated_at: now };
+  }
+
+  const session = await one(db, "SELECT * FROM claim_sessions WHERE user_id=? ORDER BY started_at DESC LIMIT 1", [userId]);
+  if (!session) return getClaimState(db, userId, now);
+
+  const effectiveTime = Math.min(now, session.ends_at);
+  const durationMs = Math.max(0, effectiveTime - session.last_collected_at);
+  const uncollected = (durationMs / 3600000) * session.rate_per_hour;
+
+  if (uncollected > 0) {
+    const newBal = Number(((cw.balance || 0) + uncollected).toFixed(5));
+    const newTotal = Number(((session.coins_collected || 0) + uncollected).toFixed(5));
+    const isFinished = now >= session.ends_at;
+    await db.batch([
+      stmt(db, "UPDATE claim_wallets SET balance=?, updated_at=? WHERE user_id=?", [newBal, now, userId]),
+      stmt(db, "UPDATE claim_sessions SET coins_collected=?, last_collected_at=?, status=?, updated_at=? WHERE id=?", [
+        newTotal, effectiveTime, isFinished ? 'stopped' : session.status, now, session.id
+      ])
+    ]);
+  }
+
+  return getClaimState(db, userId, now);
+}
+
+export async function transferClaimToWallet(db, userId, input = {}, now = Date.now()) {
+  const coins = integer(input.coins, 1000, 50000, "Số xu chuyển");
+  const requestKey = key(input.requestKey);
+
+  let cw = await one(db, "SELECT * FROM claim_wallets WHERE user_id=?", [userId]);
+  if (!cw || (cw.balance || 0) < 1000) {
+    throw new AppError("Bạn cần tích lũy tối thiểu 1.000 xu trong Ví Claim để tạo lệnh chuyển.", 400);
+  }
+  if ((cw.balance || 0) < coins) {
+    throw new AppError("Số dư Ví Claim không đủ để chuyển số xu này.", 400);
+  }
+
+  const old = await one(db, "SELECT * FROM claim_transfers WHERE user_id=? AND request_key=?", [userId, requestKey]);
+  if (old) return old;
+
+  const transferId = id();
+  await db.batch([
+    stmt(db, "UPDATE claim_wallets SET balance=balance-?, held=held+?, updated_at=? WHERE user_id=? AND balance>=?", [
+      coins, coins, now, userId, coins
+    ]),
+    stmt(db, `INSERT INTO claim_transfers (id, user_id, coins, status, request_key, created_at)
+      VALUES (?, ?, ?, 'pending', ?, ?)`, [
+      transferId, userId, coins, requestKey, now
+    ]),
+    stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+      id(), userId, "⏳ Đã gửi yêu cầu chuyển xu Claim sang Ví Xu!",
+      `Yêu cầu chuyển ${new Intl.NumberFormat("vi-VN").format(coins)} xu từ Ví Claim sang Ví Xu đã được gửi tới Ban Quản Trị. Vui lòng chờ kiểm tra và phê duyệt.`,
+      now
+    ]),
+    auditStatement(db, userId, "claim.transfer_requested", transferId, `Chuyển ${coins} xu từ Ví Claim sang Ví Xu (chờ duyệt)`, now)
+  ]);
+
+  return one(db, "SELECT * FROM claim_transfers WHERE id=?", [transferId]);
+}
+
+export async function claimTransferDecision(db, actor, input, now = Date.now()) {
+  const t = await one(db, "SELECT * FROM claim_transfers WHERE id=?", [input.id]);
+  if (!t) throw new AppError("Không tìm thấy yêu cầu.", 404);
+  if (t.status !== "pending") throw new AppError("Yêu cầu này đã được xử lý trước đó.", 409);
+
+  const note = input.note ? str(input.note, 1, 300, "Ghi chú") : (input.decision === "approve" ? "Đã duyệt chuyển xu" : "Từ chối yêu cầu");
+
+  if (input.decision === "approve") {
+    await db.batch([
+      stmt(db, "UPDATE claim_wallets SET held=held-?, updated_at=? WHERE user_id=? AND held>=?", [
+        t.coins, now, t.user_id, t.coins
+      ]),
+      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [
+        t.coins, acc(t.user_id, "available")
+      ]),
+      ...posting(db, `claim-payout:${t.id}`, "claim_mining_payout", t.user_id, "COIN", [
+        ["system:claim_mining", -t.coins],
+        [acc(t.user_id, "available"), t.coins]
+      ], now),
+      stmt(db, "UPDATE claim_transfers SET status='approved', admin_note=?, settled_at=? WHERE id=? AND status='pending'", [
+        note, now, t.id
+      ]),
+      auditStatement(db, actor, "claim_transfer.approved", t.id, `Duyệt chuyển ${t.coins} xu từ Ví Claim sang Ví Xu cho ${t.user_id}`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+        id(), t.user_id, "🎉 Chuyển xu Claim thành công!",
+        `Ban Quản Trị đã duyệt chuyển ${new Intl.NumberFormat("vi-VN").format(t.coins)} xu từ Ví Claim sang Ví Xu (Ví chơi game) của bạn! Bạn có thể dùng xu này để chơi game, tham gia giải đấu hoặc quy đổi.`,
+        now
+      ])
+    ]);
+  } else if (input.decision === "reject") {
+    await db.batch([
+      stmt(db, "UPDATE claim_wallets SET held=held-?, balance=balance+?, updated_at=? WHERE user_id=?", [
+        t.coins, t.coins, now, t.user_id
+      ]),
+      stmt(db, "UPDATE claim_transfers SET status='rejected', admin_note=?, settled_at=? WHERE id=? AND status='pending'", [
+        note, now, t.id
+      ]),
+      auditStatement(db, actor, "claim_transfer.rejected", t.id, `Từ chối chuyển xu: ${note}`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+        id(), t.user_id, "❌ Yêu cầu chuyển xu Claim chưa được duyệt",
+        `Yêu cầu chuyển ${new Intl.NumberFormat("vi-VN").format(t.coins)} xu từ Ví Claim của bạn chưa được duyệt. Số xu đã được hoàn trả lại Ví Claim. Lý do: ${note}`,
+        now
+      ])
+    ]);
+  } else {
+    throw new AppError("Quyết định không hợp lệ.", 400);
+  }
+
+  return one(db, "SELECT * FROM claim_transfers WHERE id=?", [t.id]);
+}
+
+// -------------------------
 // ADMIN DISPATCH
 // -------------------------
 
@@ -1859,6 +2143,12 @@ export async function adminAction(db, actor, action, input = {}) {
         JOIN app_users u ON u.id = c.user_id
         ORDER BY c.created_at DESC LIMIT 100
       `),
+      claimTransfers: await rows(db, `
+        SELECT ct.*, u.name AS user_name, u.email AS user_email, u.level AS user_level
+        FROM claim_transfers ct
+        JOIN app_users u ON u.id = ct.user_id
+        ORDER BY ct.created_at DESC LIMIT 100
+      `),
       payouts: await rows(db, `
         SELECT p.*, u.name AS user_name
         FROM payouts p
@@ -1891,6 +2181,7 @@ export async function adminAction(db, actor, action, input = {}) {
         earned: totalEarned,
         pending: pendingPayouts,
         pendingConversions: pendingConversions,
+        pendingClaimTransfers: (await one(db, "SELECT COUNT(*) AS n FROM claim_transfers WHERE status='pending'"))?.n || 0,
         tournaments: totalTournaments,
         transfers: totalTransfers,
       }
@@ -1978,6 +2269,7 @@ export async function adminAction(db, actor, action, input = {}) {
 
   if (action === "payout.decision") return payoutDecision(db, actor, input);
   if (action === "conversion.decision") return conversionDecision(db, actor, input);
+  if (action === "claim.transfer_decision") return claimTransferDecision(db, actor, input);
 
   if (action === "membership.grant") {
     const targetUserId = str(input.userId, 1, 100, "Người nhận");
@@ -2117,6 +2409,10 @@ export async function playerAction(db, userId, action, input = {}) {
   if (action === "user.link_payoneer") return linkPayoneer(db, userId, input.link || input.email);
   if (action === "payout.create") return createPayout(db, userId, input);
   if (action === "review.create") return createGameReview(db, userId, input);
+  if (action === "claim.state") return getClaimState(db, userId);
+  if (action === "claim.start") return startClaimSession(db, userId, input);
+  if (action === "claim.harvest") return harvestClaimSession(db, userId);
+  if (action === "claim.transfer_to_wallet") return transferClaimToWallet(db, userId, input);
 
   if (action === "favorite.toggle") {
     const g = await one(db, "SELECT id FROM games WHERE id=?", [input.gameId]);

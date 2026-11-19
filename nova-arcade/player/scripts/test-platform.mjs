@@ -5,6 +5,8 @@ import {
   createTransfer, joinTournament, submitTournamentScore, settleTournament,
   startGame, gameAction, claimReward, createPayout, payoutDecision,
   requestCoinConversion, conversionDecision, linkPayoneer,
+  CLAIM_MACHINES, getClaimState, startClaimSession, harvestClaimSession,
+  transferClaimToWallet, claimTransferDecision,
   adminAction, playerAction, AppError, TOPUP_PACKAGES
 } from "../lib/core.mjs";
 
@@ -263,6 +265,71 @@ async function runTests() {
   assert.strictEqual(paidPayout.status, "paid");
   assert.strictEqual(paidPayout.external_ref, "PAY-96B839277F");
   console.log("✓ Quy trình rút tiền Payoneer (Hold -> Approve -> Paid) hoàn tất và ghi sổ kép chuẩn xác!");
+
+  // 9. Kiểm tra Tính năng Claim Xu, Máy Đào & Duyệt chuyển sang Ví Xu
+  console.log("\n[TEST 9] Kiểm tra Tính năng Claim Xu, 10 Cấp Máy Đào, Ví Claim & Admin duyệt");
+  // User B chỉ ở Cấp 1 -> Phải bị chặn không được tham gia Claim
+  let blockedClaimErr = false;
+  try {
+    await startClaimSession(db, userB.id, { machineLevel: 1 });
+  } catch (e) {
+    blockedClaimErr = true;
+    assert.strictEqual(e.code, "LEVEL_LOCKED", "Chặn người chơi dưới Cấp 10 tham gia Claim");
+  }
+  assert.ok(blockedClaimErr, "Chặn thành công người chơi Cấp 1");
+
+  // User A ở Cấp 50 -> Bật Máy Cấp 5 (150 xu/h)
+  const startTime = Date.now();
+  const claimS1 = await startClaimSession(db, userA.id, { machineLevel: 5 }, startTime);
+  assert.strictEqual(claimS1.activeSession.machineLevel, 5);
+  assert.strictEqual(claimS1.activeSession.ratePerHour, 150);
+  assert.strictEqual(claimS1.activeSession.isRunning, true);
+
+  // Giả lập trôi qua 30 phút (1800 giây = 0.5h) -> sinh ra 75 xu
+  const midTime = startTime + 1800 * 1000;
+  const midState = await getClaimState(db, userA.id, midTime);
+  assert.strictEqual(midState.activeSession.isRunning, true);
+  assert.strictEqual(midState.activeSession.uncollectedCoins, 75);
+
+  // Thu hoạch 75 xu vào Ví Claim
+  const harvestedState = await harvestClaimSession(db, userA.id, midTime);
+  assert.strictEqual(harvestedState.claimWallet.balance, 75);
+
+  // Giả lập trôi qua 1h10p (tổng 4200 giây) -> Phiên tự động dừng ở mốc 1h (tối đa 3600s)
+  const overTime = startTime + 4200 * 1000;
+  const stoppedState = await getClaimState(db, userA.id, overTime);
+  assert.strictEqual(stoppedState.activeSession.isRunning, false, "Máy tự động dừng sau 1h");
+  assert.strictEqual(stoppedState.claimWallet.balance, 150, "Cộng đủ 150 xu của 1 giờ vào Ví Claim");
+
+  // Thêm xu trực tiếp để test chuyển sang Ví Xu (Ví dụ tích lũy đủ 1.200 xu)
+  await db.prepare("UPDATE claim_wallets SET balance = 1200 WHERE user_id=?").bind(userA.id).run();
+
+  // Thử chuyển dưới 1.000 xu -> Bị chặn
+  let underMinErr = false;
+  try {
+    await transferClaimToWallet(db, userA.id, { coins: 500 });
+  } catch (e) {
+    underMinErr = true;
+  }
+  assert.ok(underMinErr, "Chặn lệnh chuyển dưới 1.000 xu");
+
+  // Chuyển 1.000 xu sang Ví Xu
+  const claimTr = await transferClaimToWallet(db, userA.id, { coins: 1000, requestKey: "req-claim-tr-1" }, overTime);
+  assert.strictEqual(claimTr.coins, 1000);
+  assert.strictEqual(claimTr.status, "pending");
+
+  const walletAfterTr = await db.prepare("SELECT balance, held FROM claim_wallets WHERE user_id=?").bind(userA.id).first();
+  assert.strictEqual(walletAfterTr.balance, 200, "Ví Claim còn lại 200 xu khả dụng");
+  assert.strictEqual(walletAfterTr.held, 1000, "1.000 xu được giữ trong trạng thái chờ duyệt");
+
+  // Admin duyệt chuyển xu
+  const balBeforeApprove = (await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userA.id}:available`).first()).balance;
+  await claimTransferDecision(db, "admin:finance", { id: claimTr.id, decision: "approve" }, overTime);
+
+  const balAfterApprove = (await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userA.id}:available`).first()).balance;
+  assert.strictEqual(balAfterApprove, balBeforeApprove + 1000, "Ví Xu nhận đúng 1.000 xu sau khi Admin duyệt");
+
+  console.log("✓ Quy trình Claim Xu (Level check -> Bật 1h -> Tự động dừng -> Thu hoạch -> Chuyển Ví Xu -> Admin duyệt) hoàn tất 100%!");
 
   // 8. Kiểm tra toàn diện sổ cái kép (Zero-sum double-entry ledger invariant)
   console.log("\n[TEST 8] Kiểm tra bất biến toàn diện sổ cái kép (Debit == Credit across entire system)");
