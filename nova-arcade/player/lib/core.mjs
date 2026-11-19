@@ -246,7 +246,7 @@ export async function seed(db) {
   } catch {}
 
   const ver = (await one(db, "SELECT value FROM app_settings WHERE key='seed_version'"))?.value;
-  if (ver === "5.0") return;
+  if (ver === "6.0") return;
 
   const commands = [];
   const prices = { bronze: [300, 900, 7900], gold: [700, 1900, 17900], diamond: [1500, 3900, 34900] };
@@ -390,7 +390,7 @@ export async function seed(db) {
       currency: "USD"
     })
   ]));
-  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','5.0') ON CONFLICT(key) DO UPDATE SET value='5.0'", []));
+  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','6.0') ON CONFLICT(key) DO UPDATE SET value='6.0'", []));
 
   await db.batch(commands);
 }
@@ -1013,9 +1013,217 @@ const WORDS_VOCABULARY = [
   { word: "GALAXY", clue: "Dải ngân hà giữa vũ trụ bao la" },
   { word: "VICTORY", clue: "Cảm giác tuyệt vời khi chạm đỉnh vinh quang" },
   { word: "PUZZLE", clue: "Câu đố trí tuệ đòi hỏi tư duy logic" },
-  { word: "CHAMPION", clue: "Nhà vô địch trên bảng xếp hạng" },
+  { word: "CHAMPION", clue: "Nhà vô địch trên bảng xếp hạng vàng" },
   { word: "REFLEX", clue: "Phản xạ nhanh nhạy trong từng tích tắc" },
+  { word: "MATRIX", clue: "Ma trận dữ liệu số học quy luật" },
+  { word: "WARRIOR", clue: "Chiến binh dũng cảm xông pha chiến trường" },
+  { word: "KNIGHT", clue: "Hiệp sĩ hoàng gia mang gươm báu" },
+  { word: "DRAGON", clue: "Rồng thiêng huyền thoại phun lửa" },
+  { word: "PHOENIX", clue: "Phượng hoàng lửa hồi sinh từ tro tàn" },
+  { word: "SPEED", clue: "Tốc độ đỉnh cao xé toạc màn đêm" },
+  { word: "ENERGY", clue: "Nguồn năng lượng bất tận thắp sáng hành tinh" },
+  { word: "SHADOW", clue: "Bóng đêm huyền bí rình rập mục tiêu" },
+  { word: "TARGET", clue: "Mục tiêu chuẩn xác ngay giữa hồng tâm" },
+  { word: "COMBO", clue: "Chuỗi đòn tấn công liên hoàn uy lực" },
+  { word: "LEGEND", clue: "Huyền thoại bất tử lưu danh muôn thuở" },
+  { word: "FUTURE", clue: "Thế giới tương lai với công nghệ đỉnh cao" },
+  { word: "COSMOS", clue: "Vũ trụ vô tận chứa hàng tỷ vì sao" },
+  { word: "METEOR", clue: "Mưa sao băng lướt qua bầu trời đêm" },
+  { word: "PLANET", clue: "Hành tinh xanh quay quanh mặt trời" },
+  { word: "ROCKET", clue: "Tên lửa đẩy xuyên tầng khí quyển" },
+  { word: "RADAR", clue: "Hệ thống radar quét định vị mục tiêu" },
+  { word: "SHIELD", clue: "Lá chắn hộ thân ngăn chặn mọi đòn đánh" },
+  { word: "WEAPON", clue: "Vũ khí tối thượng hạ gục đối thủ" },
+  { word: "CASTLE", clue: "Tòa lâu đài cổ nguy nga tráng lệ" },
+  { word: "DIAMOND", clue: "Kim cương quý giá cứng nhất trần đời" },
+  { word: "EMERALD", clue: "Ngọc lục bảo xanh biếc quý hiếm" },
+  { word: "SAPPHIRE", clue: "Đá lam ngọc lấp lánh ánh đại dương" },
+  { word: "CRYSTAL", clue: "Khối pha lê trong suốt tỏa hào quang" },
+  { word: "THUNDER", clue: "Tiếng sấm rền vang rung chuyển đất trời" },
+  { word: "LIGHTNING", clue: "Tia chớp xé rách màn mây giông bão" },
+  { word: "BLIZZARD", clue: "Cơn bão tuyết trắng xóa phủ kín ngọn núi" },
+  { word: "CYCLONE", clue: "Cơn lốc xoáy dữ dội cuốn phăng chướng ngại" },
+  { word: "VOLCANO", clue: "Núi lửa phun trào dòng nham thạch rực đỏ" },
+  { word: "GLACIER", clue: "Khối sông băng vĩnh cửu trôi dạt cực bắc" },
+  { word: "ISLAND", clue: "Hòn đảo hoang sơ ẩn chứa bí mật thần bí" },
+  { word: "JUNGLE", clue: "Khu rừng rậm nhiệt đới bạt ngàn muôn thú" },
+  { word: "DESERT", clue: "Sa mạc cát vàng mênh mông dưới nắng hè" },
+  { word: "CANYON", clue: "Hẻm núi đá sâu thẳm hùng vĩ nghìn năm" },
+  { word: "TEMPLE", clue: "Ngôi đền thiêng cổ kính giữa rừng sâu" },
+  { word: "PYRAMID", clue: "Kim tự tháp kỳ vĩ sừng sững giữa cát vàng" },
+  { word: "TREASURE", clue: "Rương kho báu vàng bạc chôn giấu ngàn năm" },
+  { word: "ODYSSEY", clue: "Cuộc hải trình phiêu lưu khám phá tân thế giới" },
+  { word: "HORIZON", clue: "Đường chân trời rực rỡ buổi hoàng hôn" },
+  { word: "ECLIPSE", clue: "Hiện tượng nhật thực kỳ thú che khuất mặt trời" },
+  { word: "AURORA", clue: "Vũ điệu cực quang kỳ ảo trên bầu trời đêm" },
+  { word: "NEBULA", clue: "Tinh vân rực rỡ sắc màu không gian sâu" },
+  { word: "GRAVITY", clue: "Lực hấp dẫn níu giữ vạn vật trong vũ trụ" },
+  { word: "QUANTUM", clue: "Thế giới cơ học lượng tử vi mô bí ẩn" },
+  { word: "ROBOTIC", clue: "Hệ thống người máy tự hành thông minh" },
+  { word: "CYBER", clue: "Không gian mạng kết nối dữ liệu toàn cầu" },
+  { word: "NEURAL", clue: "Mạng lưới thần kinh nhân tạo học sâu" },
+  { word: "SILICON", clue: "Chất bán dẫn chế tạo vi mạch điện tử" },
+  { word: "ENGINE", clue: "Khối động cơ tăng áp gầm rú mãnh liệt" },
+  { word: "TURBO", clue: "Chế độ tăng tốc độ cực hạn bứt phá" },
+  { word: "RACER", clue: "Tay đua cự phách chinh phục khúc cua gắt" },
+  { word: "CIRCUIT", clue: "Đường đua khép kín tranh tài cúp Grand Prix" },
+  { word: "RUNNER", clue: "Vận động viên chạy nước rút chạm đích đầu tiên" },
+  { word: "JUMPER", clue: "Cú bật nhảy vượt chướng ngại vật ngoạn mục" },
+  { word: "MASTER", clue: "Bậc thầy lão luyện tinh thông mọi tuyệt kỹ" },
+  { word: "WIZARD", clue: "Phù thủy cao tay điều khiển phép thuật ma mị" },
+  { word: "ARCHER", clue: "Cung thủ tài ba ngắm bắn chuẩn xác từng milimet" },
+  { word: "HUNTER", clue: "Thợ săn thiện chiến theo dấu vết trong sương mù" },
+  { word: "STRIKER", clue: "Mũi nhọn tấn công chớp thời cơ dứt điểm hiểm" },
+  { word: "LEADER", clue: "Người thủ lĩnh tài ba dẫn đầu đoàn quân chiến thắng" },
+  { word: "HEROIC", clue: "Hành động dũng cảm phi thường lưu danh hậu thế" },
+  { word: "BRAVERY", clue: "Lòng quả cảm sắt đá trước hiểm nguy bão táp" },
+  { word: "COURAGE", clue: "Ý chí kiên định không hề run sợ trước nghịch cảnh" },
+  { word: "SPIRIT", clue: "Ý chí chiến đấu rực lửa không bao giờ lùi bước" },
+  { word: "WISDOM", clue: "Trí tuệ thông thái nhìn thấu mọi quy luật trần gian" },
+  { word: "MEMORY", clue: "Ký ức hoàn hảo lưu giữ mọi chi tiết sắc nét" },
+  { word: "GENIUS", clue: "Bộ óc thiên tài giải mã điều không thể" },
+  { word: "TALENT", clue: "Tài năng thiên bẩm xuất chúng hơn người" },
+  { word: "SYSTEM", clue: "Hệ thống vận hành trơn tru chuẩn chỉ từng giây" },
+  { word: "SYMBOL", clue: "Ký hiệu cổ mang năng lượng bảo hộ nhiệm màu" },
+  { word: "CIPHER", clue: "Bản mật mã cổ đại cần được giải mã" },
+  { word: "SECRET", clue: "Bí mật tối cao chỉ người chiến thắng mới biết" },
+  { word: "MYSTERY", clue: "Điều kỳ bí kích thích sự tò mò của nhân loại" },
+  { word: "RIDDLE", clue: "Câu đố hóc búa thử thách tài suy luận bén nhạy" },
+  { word: "ENIGMA", clue: "Cỗ máy giải mã bí ẩn vĩ đại trong lịch sử" },
+  { word: "SPHINX", clue: "Tượng nhân sư canh giữ lăng mộ cổ Ai Cập" },
+  { word: "ORACLE", clue: "Nhà tiên tri nhìn thấu quá khứ và tương lai" },
+  { word: "FORTUNE", clue: "Vận may ngàn vàng bất ngờ mỉm cười" },
+  { word: "DESTINY", clue: "Định mệnh an bài cho người xứng đáng nhất" },
+  { word: "MIRACLE", clue: "Phép màu xuất hiện xoay chuyển tình thế" },
+  { word: "PARADISE", clue: "Miền đất thiên đường ngập tràn ánh nắng ấm" },
+  { word: "HARMONY", clue: "Sự hài hòa êm dịu giữa đất trời và con người" },
+  { word: "SYMPHONY", clue: "Bản giao hưởng ngân vang lay động tâm can" },
+  { word: "MELODY", clue: "Giai điệu du dương xua tan mọi mỏi mệt" },
+  { word: "RHYTHM", clue: "Nhịp điệu sôi động cuốn hút từng bước chân" },
+  { word: "PASSION", clue: "Ngọn lửa đam mê cháy bỏng khát khao chạm đỉnh" },
+  { word: "TRIUMPH", clue: "Khúc khải hoàn ca vang dội trên đài vinh quang" },
+  { word: "SUPREME", clue: "Cảnh giới tối cao không ai sánh bằng" },
+  { word: "INFINITE", clue: "Không gian vô hạn không có điểm khởi đầu kết thúc" },
+  { word: "ETERNAL", clue: "Sự tồn tại vĩnh hằng cùng thời gian năm tháng" },
+  { word: "MAJESTIC", clue: "Vẻ đẹp tráng lệ uy nghiêm khiến muôn người ngưỡng mộ" },
+  { word: "ULTIMATE", clue: "Giới hạn tối thượng đỉnh cao của thử thách" },
+  { word: "HORIZONS", clue: "Những chân trời mới mở ra cơ hội bất tận" },
+  { word: "ASCENSION", clue: "Bước thăng hoa vươn tới đẳng cấp vũ trụ" }
 ];
+
+function generateStageData(engine, stage = 1, now = Date.now()) {
+  const stageData = {
+    stage,
+    maxStages: 100,
+    stageTimeLimit: 30, // 30s countdown timer
+    stageDeadline: now + 30000,
+    timeLeft: 30,
+    engine
+  };
+
+  if (engine === "memory") {
+    let pairCount = 2; // 4 cards
+    if (stage > 75) pairCount = 8; // 16 cards
+    else if (stage > 50) pairCount = 6; // 12 cards
+    else if (stage > 25) pairCount = 4; // 8 cards
+    else if (stage > 10) pairCount = 3; // 6 cards
+
+    const cardIds = Array.from({ length: pairCount }, (_, i) => i);
+    const deck = shuffle([...cardIds, ...cardIds]);
+    return {
+      ...stageData,
+      deck,
+      open: [],
+      matched: [],
+      moves: 0,
+      feedback: `Màn ${stage}/100: Tìm đủ ${pairCount} cặp thẻ trong 30 giây!`
+    };
+  }
+
+  if (engine === "number") {
+    let text = "", answer = 0;
+    if (stage <= 10) {
+      const a = rand(9) + 2, b = rand(9) + 2;
+      text = `${a} + ${b}`;
+      answer = a + b;
+    } else if (stage <= 25) {
+      const a = rand(40) + 10, b = rand(25) + 5;
+      const sub = rand(2) === 0;
+      text = sub ? `${a + b} - ${b}` : `${a} + ${b}`;
+      answer = sub ? a : a + b;
+    } else if (stage <= 50) {
+      const a = rand(10) + 2, b = rand(9) + 2;
+      text = `${a} × ${b}`;
+      answer = a * b;
+    } else if (stage <= 75) {
+      const a = rand(12) + 2, b = rand(9) + 2, c = rand(20) + 1;
+      text = `${a} × ${b} + ${c}`;
+      answer = a * b + c;
+    } else {
+      const a = rand(15) + 3, b = rand(12) + 2, c = rand(30) + 5;
+      text = `${a} × ${b} - ${c}`;
+      answer = a * b - c;
+    }
+    return {
+      ...stageData,
+      question: text,
+      answer,
+      feedback: `Màn ${stage}/100: Tính nhanh và chính xác trong 30 giây!`
+    };
+  }
+
+  if (engine === "reflex") {
+    const windowMs = Math.max(280, 1500 - (stage * 12));
+    const delay = 1000 + rand(1500);
+    return {
+      ...stageData,
+      goAt: now + delay,
+      windowMs,
+      feedback: `Màn ${stage}/100: Chạm ngay khi có tín hiệu (Cửa sổ: ${windowMs}ms · Giới hạn: 30s)!`
+    };
+  }
+
+  if (engine === "blocks") {
+    return {
+      ...stageData,
+      board: Array(64).fill(0),
+      shapes: [BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)]],
+      placed: [],
+      linesCleared: 0,
+      feedback: `Màn ${stage}/100: Đặt các khối và xóa ít nhất 1 dòng trong 30s!`
+    };
+  }
+
+  if (engine === "orbit") {
+    const numHazards = stage > 40 ? 2 : 1;
+    const hazards = [];
+    while (hazards.length < numHazards) {
+      const h = rand(3);
+      if (!hazards.includes(h)) hazards.push(h);
+    }
+    return {
+      ...stageData,
+      lane: 1,
+      hazardLanes: hazards,
+      strikeAt: now + Math.max(1200, 2200 - stage * 10),
+      feedback: `Màn ${stage}/100: Chuyển làn né tránh vật cản trong 30s!`
+    };
+  }
+
+  if (engine === "word") {
+    const wordIdx = (stage - 1) % WORDS_VOCABULARY.length;
+    const item = WORDS_VOCABULARY[wordIdx];
+    return {
+      ...stageData,
+      word: item.word,
+      clue: item.clue,
+      scrambled: shuffle(item.word.split("")).join(""),
+      feedback: `Màn ${stage}/100: Giải mã từ vựng trong 30 giây!`
+    };
+  }
+
+  return stageData;
+}
 
 function publicState(session) {
   const s = parse(session.state_json);
@@ -1026,7 +1234,14 @@ function publicState(session) {
     engine,
     version: session.version,
     completed: !!session.completed,
+    gameOver: !!s.gameOver,
     score: session.score,
+    stage: s.stage || 1,
+    maxStages: s.maxStages || 100,
+    stageTimeLimit: s.stageTimeLimit || 30,
+    stageDeadline: s.stageDeadline || (Date.now() + 30000),
+    timeLeft: Math.max(0, Math.ceil(((s.stageDeadline || (Date.now() + 30000)) - Date.now()) / 1000)),
+    feedback: s.feedback,
     expiresAt: session.expires_at
   };
 
@@ -1034,10 +1249,10 @@ function publicState(session) {
     return { ...common, moves: s.moves, matched: s.matched, cards: s.deck.map((v, i) => s.matched.includes(i) || s.open.includes(i) ? v : null) };
   }
   if (engine === "number") {
-    return { ...common, index: s.index, total: 10, correct: s.correct, feedback: s.feedback, question: s.questions[s.index]?.text || null };
+    return { ...common, question: s.question, feedback: s.feedback };
   }
   if (engine === "reflex") {
-    return { ...common, round: s.round, total: 5, goAt: s.goAt, times: s.times, feedback: s.feedback };
+    return { ...common, goAt: s.goAt, windowMs: s.windowMs, feedback: s.feedback };
   }
   if (engine === "blocks") {
     return {
@@ -1046,17 +1261,13 @@ function publicState(session) {
       currentShapes: s.shapes,
       placedIndices: s.placed,
       linesCleared: s.linesCleared,
-      feedback: s.feedback,
-      turn: s.turn,
-      totalTurns: 6
+      feedback: s.feedback
     };
   }
   if (engine === "orbit") {
     return {
       ...common,
       lane: s.lane,
-      wave: s.wave,
-      totalWaves: 8,
       hazardLanes: s.hazardLanes,
       strikeAt: s.strikeAt,
       feedback: s.feedback
@@ -1065,11 +1276,8 @@ function publicState(session) {
   if (engine === "word") {
     return {
       ...common,
-      index: s.index,
-      total: 5,
       scrambled: s.scrambled,
       clue: s.clue,
-      correct: s.correct,
       feedback: s.feedback
     };
   }
@@ -1084,54 +1292,11 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
   if (recent.n >= 15) throw new AppError("Bạn mở phiên quá nhanh. Hãy đợi một chút.", 429);
 
   const engine = g.engine || "reflex";
-  let state;
-  if (engine === "memory") {
-    state = { deck: shuffle([0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]), open: [], matched: [], moves: 0 };
-  } else if (engine === "number") {
-    state = {
-      index: 0, correct: 0, feedback: null,
-      questions: Array.from({ length: 10 }, () => {
-        const a = rand(25) + 2, b = rand(15) + 2, m = rand(3) === 0;
-        return { text: `${a} ${m ? "×" : "+"} ${b}`, answer: m ? a * b : a + b };
-      })
-    };
-  } else if (engine === "reflex") {
-    state = { round: 0, goAt: now + 2000 + rand(2000), times: [], feedback: "Chờ tín hiệu xanh…" };
-  } else if (engine === "blocks") {
-    // 8x8 board: 64 cells
-    state = {
-      board: Array(64).fill(0),
-      shapes: [BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)]],
-      placed: [],
-      linesCleared: 0,
-      feedback: "Chọn một khối hình và đặt vào ô trống trên bàn cờ.",
-      turn: 1
-    };
-  } else if (engine === "orbit") {
-    // 3 orbital lanes: 0 (Inner), 1 (Middle), 2 (Outer)
-    const hazard = rand(3);
-    state = {
-      lane: 1,
-      wave: 0,
-      hazardLanes: [hazard],
-      strikeAt: now + 2200,
-      feedback: `Cảnh báo thiên thạch ở quỹ đạo ${hazard === 0 ? "Trong" : hazard === 1 ? "Giữa" : "Ngoài"}!`
-    };
-  } else if (engine === "word") {
-    const shuffledWords = shuffle(WORDS_VOCABULARY).slice(0, 5);
-    const firstWord = shuffledWords[0];
-    state = {
-      words: shuffledWords,
-      index: 0,
-      correct: 0,
-      scrambled: shuffle(firstWord.word.split("")).join(""),
-      clue: firstWord.clue,
-      feedback: "Giải mã các chữ cái để tìm từ đúng."
-    };
-  } else {
-    throw new AppError("Loại trò chơi chưa được hỗ trợ.");
-  }
-  state.engine = engine;
+  const state = {
+    ...generateStageData(engine, 1, now),
+    engine,
+    gameOver: false
+  };
 
   const session = {
     id: id(),
@@ -1142,7 +1307,7 @@ export async function startGame(db, userId, gameId, now = Date.now()) {
     completed: 0,
     score: 0,
     created_at: now,
-    expires_at: now + 15 * 60000
+    expires_at: now + 30 * 60000
   };
 
   await stmt(db, `INSERT INTO game_sessions (id,user_id,game_id,state_json,version,completed,score,created_at,expires_at)
@@ -1164,8 +1329,22 @@ export async function gameAction(db, userId, input, now = Date.now()) {
   const engine = s.engine || session.game_id;
   let completed = 0, score = session.score;
 
+  // 1. TIMEOUT CHECK (30s per stage countdown)
+  if (input.timeout || (s.stageDeadline && now > s.stageDeadline + 2500)) {
+    s.gameOver = true;
+    completed = 1;
+    s.feedback = `⏰ HẾT THỜI GIAN (30s) - GAME OVER! Bạn đã dừng bước ở Màn ${s.stage || 1} / 100. Hãy thử lại để đạt mốc cao hơn!`;
+    await stmt(db, `UPDATE game_sessions SET state_json=?,completed=1,score=?,version=version+1
+      WHERE id=? AND user_id=? AND version=?`, [
+      JSON.stringify(s), score, session.id, userId, session.version
+    ]).run();
+    return publicState({ ...session, state_json: JSON.stringify(s), completed: 1, score, version: session.version + 1 });
+  }
+
+  let stagePassed = false;
+
   if (engine === "memory") {
-    const index = integer(input.index, 0, 15, "Thẻ");
+    const index = integer(input.index, 0, s.deck.length - 1, "Thẻ");
     if (s.open.length === 2) s.open = [];
     if (s.matched.includes(index) || s.open.includes(index)) throw new AppError("Chọn một thẻ khác.");
     s.open.push(index);
@@ -1176,36 +1355,36 @@ export async function gameAction(db, userId, input, now = Date.now()) {
         s.open = [];
       }
     }
-    completed = s.matched.length === 16 ? 1 : 0;
-    score = completed ? Math.max(20, 160 - (s.moves - 8) * 5) : s.matched.length * 10;
+    if (s.matched.length === s.deck.length) {
+      stagePassed = true;
+    }
 
   } else if (engine === "number") {
-    const answer = integer(input.answer, -10000, 10000, "Câu trả lời");
-    const correct = answer === s.questions[s.index].answer;
-    s.correct += correct ? 1 : 0;
-    s.feedback = correct ? "Chính xác!" : `Đáp án là ${s.questions[s.index].answer}`;
-    s.index++;
-    completed = s.index === 10 ? 1 : 0;
-    score = s.correct * 100;
+    const answer = integer(input.answer, -100000, 100000, "Đáp án");
+    if (answer === s.answer) {
+      stagePassed = true;
+    } else {
+      s.feedback = `Chưa đúng. Đáp án là ${s.answer}. Tiếp tục cố gắng!`;
+    }
 
   } else if (engine === "reflex") {
     const elapsed = now - s.goAt;
-    s.round++;
-    s.times.push(elapsed >= 100 && elapsed <= 3000 ? elapsed : 3000);
-    s.feedback = elapsed < 100 ? "Quá sớm! Lượt này chưa đạt." : elapsed > 3000 ? "Hết thời gian lượt này." : `${elapsed} ms`;
-    s.goAt = now + 1500 + rand(2000);
-    completed = s.round === 5 ? 1 : 0;
-    score = Math.max(0, Math.round(1000 - s.times.reduce((a, b) => a + b, 0) / s.times.length / 3));
+    if (elapsed < 100) {
+      s.feedback = "Quá sớm! Chưa có tín hiệu.";
+    } else if (elapsed <= (s.windowMs || 1500)) {
+      stagePassed = true;
+    } else {
+      s.feedback = "Quá trễ! Phản xạ chưa kịp thời.";
+    }
 
   } else if (engine === "blocks") {
-    const pieceIdx = integer(input.pieceIndex, 0, 2, "Khối hình");
+    const pieceIdx = integer(input.pieceIndex, 0, s.shapes.length - 1, "Khối hình");
     const targetRow = integer(input.row, 0, 7, "Hàng");
     const targetCol = integer(input.col, 0, 7, "Cột");
 
     if (s.placed.includes(pieceIdx)) throw new AppError("Khối này đã được đặt rồi.");
     const shape = s.shapes[pieceIdx];
 
-    // Check validity of placing shape at (targetRow, targetCol)
     for (const [dr, dc] of shape) {
       const r = targetRow + dr;
       const c = targetCol + dc;
@@ -1213,7 +1392,6 @@ export async function gameAction(db, userId, input, now = Date.now()) {
       if (s.board[r * 8 + c] !== 0) throw new AppError("Vị trí này đã có khối khác.");
     }
 
-    // Place shape
     for (const [dr, dc] of shape) {
       s.board[(targetRow + dr) * 8 + (targetCol + dc)] = 1;
     }
@@ -1221,89 +1399,65 @@ export async function gameAction(db, userId, input, now = Date.now()) {
     score += shape.length * 15;
 
     // Check full rows & columns
-    const fullRows = [];
-    const fullCols = [];
+    let cleared = 0;
     for (let r = 0; r < 8; r++) {
-      if (Array.from({ length: 8 }, (_, c) => s.board[r * 8 + c]).every(v => v !== 0)) fullRows.push(r);
+      if (Array.from({ length: 8 }, (_, c) => s.board[r * 8 + c]).every(v => v !== 0)) {
+        for (let c = 0; c < 8; c++) s.board[r * 8 + c] = 0;
+        cleared++;
+      }
     }
     for (let c = 0; c < 8; c++) {
-      if (Array.from({ length: 8 }, (_, r) => s.board[r * 8 + c]).every(v => v !== 0)) fullCols.push(c);
-    }
-
-    // Clear full rows
-    for (const r of fullRows) {
-      for (let c = 0; c < 8; c++) s.board[r * 8 + c] = 0;
-    }
-    for (const c of fullCols) {
-      for (let r = 0; r < 8; r++) s.board[r * 8 + c] = 0;
-    }
-
-    const cleared = fullRows.length + fullCols.length;
-    s.linesCleared += cleared;
-    if (cleared > 0) {
-      score += cleared * 120;
-      s.feedback = `Xuất sắc! Xóa được ${cleared} dòng/cột (+${cleared * 120} điểm).`;
-    } else {
-      s.feedback = "Đã đặt khối thành công.";
-    }
-
-    // If all 3 pieces in turn placed, advance turn
-    if (s.placed.length === 3) {
-      s.turn++;
-      s.placed = [];
-      s.shapes = [BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)]];
-      if (s.turn > 6) {
-        completed = 1;
-        s.feedback = "Hoàn thành 6 lượt xếp khối!";
+      if (Array.from({ length: 8 }, (_, r) => s.board[r * 8 + c]).every(v => v !== 0)) {
+        for (let r = 0; r < 8; r++) s.board[r * 8 + c] = 0;
+        cleared++;
       }
     }
 
-  } else if (engine === "orbit") {
-    // Lane switch or wait
-    if (input.lane !== undefined) {
-      s.lane = integer(input.lane, 0, 2, "Quỹ đạo");
-    }
-    // Check if hazard struck
-    const safe = !s.hazardLanes.includes(s.lane);
-    if (safe) {
-      score += 120;
-      s.feedback = "Né tránh an toàn! +120 điểm.";
-    } else {
-      s.feedback = "Va chạm thiên thạch! Không nhận điểm lượt này.";
+    if (cleared > 0) {
+      stagePassed = true;
+    } else if (s.placed.length === s.shapes.length) {
+      s.placed = [];
+      s.shapes = [BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)], BLOCK_SHAPES[rand(BLOCK_SHAPES.length)]];
     }
 
-    s.wave++;
-    if (s.wave >= 8) {
-      completed = 1;
-      s.feedback = "Vượt qua toàn bộ 8 đợt sóng quỹ đạo!";
+  } else if (engine === "orbit") {
+    if (input.lane !== undefined) {
+      s.lane = integer(input.lane, 0, 2, "Làn");
+    }
+    const safe = !s.hazardLanes.includes(s.lane);
+    if (safe) {
+      stagePassed = true;
     } else {
-      // Pick next hazard
-      const nextHazard = rand(3);
-      s.hazardLanes = [nextHazard];
-      s.strikeAt = now + 2500;
-      s.feedback += ` Đợt ${s.wave + 1}: Thiên thạch quỹ đạo ${nextHazard === 0 ? "Trong" : nextHazard === 1 ? "Giữa" : "Ngoài"}!`;
+      s.gameOver = true;
+      completed = 1;
+      s.feedback = `💥 Va chạm chướng ngại vật - GAME OVER! Bạn dừng bước ở Màn ${s.stage || 1} / 100.`;
     }
 
   } else if (engine === "word") {
-    const guess = str(input.guess, 1, 20, "Từ đoán").toUpperCase().trim();
-    const targetWord = s.words[s.index].word;
-    const isCorrect = guess === targetWord;
-    if (isCorrect) {
-      s.correct++;
-      score += 150;
-      s.feedback = `Chính xác! "${targetWord}" (+150 điểm).`;
+    const guess = str(input.guess, 1, 30, "Từ đoán").toUpperCase().trim();
+    if (guess === s.word) {
+      stagePassed = true;
     } else {
-      s.feedback = `Chưa đúng. Đáp án là "${targetWord}".`;
+      s.feedback = `Chưa đúng! Thử lại hoặc đọc kỹ gợi ý: ${s.clue}`;
     }
+  }
 
-    s.index++;
-    if (s.index >= 5) {
+  // 2. STAGE PROGRESSION (Up to 100 Stages with escalating difficulty!)
+  if (stagePassed && !s.gameOver) {
+    const remainingSec = Math.max(0, Math.ceil((s.stageDeadline - now) / 1000));
+    const timeBonus = remainingSec * 15;
+    const stageBonus = 100 + (s.stage || 1) * 20;
+    score += stageBonus + timeBonus;
+
+    if ((s.stage || 1) >= 100) {
       completed = 1;
-      s.feedback += " Hoàn thành chuyến hành trình từ vựng!";
+      s.gameOver = false;
+      s.feedback = `🏆 XUẤT SẮC! BẠN ĐÃ PHÁ ĐẢO TOÀN BỘ 100 MÀN CHƠI! Kỷ lục: ${score} điểm!`;
     } else {
-      const nextWord = s.words[s.index];
-      s.scrambled = shuffle(nextWord.word.split("")).join("");
-      s.clue = nextWord.clue;
+      const nextStage = (s.stage || 1) + 1;
+      const nextData = generateStageData(engine, nextStage, now);
+      Object.assign(s, nextData);
+      s.feedback = `🎉 VƯỢT MÀN ${nextStage - 1} (+${stageBonus + timeBonus}đ)! Tiến vào Màn ${nextStage}/100 (Độ khó tăng) · Thời gian: 30s!`;
     }
   }
 
@@ -1478,21 +1632,21 @@ export async function conversionDecision(db, actor, input, now = Date.now()) {
   return one(db, "SELECT * FROM conversion_requests WHERE id=?", [req.id]);
 }
 
-export async function linkPayoneer(db, userId, emailInput) {
-  const email = str(emailInput, 5, 100, "Email ví Payoneer").trim().toLowerCase();
-  if (!email.includes("@") || !email.includes(".")) throw new AppError("Email Payoneer không đúng định dạng.", 400);
+export async function linkPayoneer(db, userId, linkInput) {
+  const link = str(linkInput, 5, 300, "Liên kết ví Payoneer").trim();
+  if (link.length < 5) throw new AppError("Đường dẫn liên kết ví Payoneer không hợp lệ.", 400);
 
-  await stmt(db, "UPDATE app_users SET payoneer_email=? WHERE id=?", [email, userId]).run();
+  await stmt(db, "UPDATE app_users SET payoneer_email=? WHERE id=?", [link, userId]).run();
   const now = Date.now();
   try {
     await stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
       id(), userId, "🔗 Đã liên kết ví Payoneer thành công!",
-      `Tài khoản của bạn đã liên kết thành công địa chỉ ví Payoneer: [${email}]. Giờ đây bạn có thể tạo lệnh rút tiền từ Ví Chính về địa chỉ này khi đạt điều kiện.`,
+      `Tài khoản của bạn đã liên kết thành công liên kết ví Payoneer: [${link}]. Khi có lệnh rút tiền, Ban Quản Trị sẽ chuyển tiền trực tiếp vào liên kết ví này.`,
       now
     ]).run();
   } catch {}
 
-  return { success: true, payoneerEmail: email };
+  return { success: true, payoneerEmail: link };
 }
 
 // -------------------------
@@ -1955,7 +2109,7 @@ export async function playerAction(db, userId, action, input = {}) {
   if (action === "game.action") return gameAction(db, userId, input);
   if (action === "game.claim") return claimReward(db, userId, str(input.sessionId, 1, 100, "Phiên"));
   if (action === "wallet.convert_coins") return requestCoinConversion(db, userId, input);
-  if (action === "user.link_payoneer") return linkPayoneer(db, userId, input.email);
+  if (action === "user.link_payoneer") return linkPayoneer(db, userId, input.link || input.email);
   if (action === "payout.create") return createPayout(db, userId, input);
   if (action === "review.create") return createGameReview(db, userId, input);
 

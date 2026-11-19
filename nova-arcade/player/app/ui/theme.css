@@ -82,6 +82,17 @@
 .action-target-card.strike-ready { border-color: #ff4757; background: radial-gradient(circle, #5b1424 0%, #200810 100%); box-shadow: 0 0 35px rgba(255, 71, 87, 0.45); transform: scale(1.03); }
 .action-hud-text { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 800; color: #ff6b81; }
 
+/* 100 Stages & 30s Countdown HUD */
+.stage-hud-wrapper { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; margin-bottom: 12px; padding: 8px 14px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
+.stage-level-badge { display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--lime); font-size: 13px; }
+.stage-countdown-box { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; font-family: monospace; color: var(--text); padding: 4px 10px; border-radius: 6px; background: #161b28; border: 1px solid #2d364f; min-width: 140px; }
+.stage-countdown-box.warning { border-color: var(--amber); color: var(--amber); }
+.stage-countdown-box.urgent { border-color: var(--rose); color: var(--rose); animation: pulse 0.5s infinite; }
+.stage-countdown-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; min-width: 40px; }
+.stage-countdown-fill { height: 100%; background: var(--lime); border-radius: 3px; transition: width 0.3s ease-linear; }
+.stage-countdown-box.warning .stage-countdown-fill { background: var(--amber); }
+.stage-countdown-box.urgent .stage-countdown-fill { background: var(--rose); }
+
 /* Fullscreen Mode */
 .modal.fullscreen{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0;border:0}
 .modal.fullscreen .game-modal{min-height:calc(100vh - 65px)}

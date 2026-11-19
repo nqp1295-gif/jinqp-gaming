@@ -821,7 +821,7 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                               <th>Tổng rút (Gross)</th>
                               <th>Phí rút (15%)</th>
                               <th>Thực chuyển Payoneer</th>
-                              <th>Email Payoneer nhận</th>
+                              <th>Liên kết ví Payoneer nhận</th>
                               <th>Trạng thái</th>
                               <th>Xử lý</th>
                             </tr>
@@ -844,8 +844,15 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                                   <td><span style={{ color: "var(--rose)", fontWeight: 600 }}>-{money(fee)}</span></td>
                                   <td><strong style={{ color: "var(--lime)", fontSize: "1.1em" }}>{money(net)}</strong></td>
                                   <td>
-                                    <strong style={{ color: "var(--text)" }}>{p.recipient}</strong>
-                                    <small>Địa chỉ Payoneer</small>
+                                    <a
+                                      href={p.recipient?.startsWith("http") ? p.recipient : `https://${p.recipient}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{ color: "var(--lime)", textDecoration: "underline", wordBreak: "break-all", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                    >
+                                      {p.recipient} <ExternalLink size={12} />
+                                    </a>
+                                    <small>Link ví nhận của người chơi</small>
                                   </td>
                                   <td><Badge value={p.status} /></td>
                                   <td>
@@ -934,7 +941,14 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                               </td>
                               <td>
                                 {u.payoneer_email ? (
-                                  <strong style={{ color: "var(--text)" }}>{u.payoneer_email}</strong>
+                                  <a
+                                    href={u.payoneer_email.startsWith("http") ? u.payoneer_email : `https://${u.payoneer_email}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ color: "var(--lime)", textDecoration: "underline", wordBreak: "break-all", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                  >
+                                    {u.payoneer_email} <ExternalLink size={12} />
+                                  </a>
                                 ) : (
                                   <small style={{ color: "var(--muted)" }}>Chưa liên kết</small>
                                 )}
@@ -1318,8 +1332,12 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
         <Modal title="Xác nhận đã chuyển tiền qua Payoneer" close={() => setConfirmPaidModal(null)}>
           <div style={{ padding: "16px 20px" }}>
             <div style={{ background: "rgba(180, 248, 86, 0.08)", border: "1px solid rgba(180, 248, 86, 0.2)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Ví Payoneer nhận tiền của người chơi:</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--lime)", marginTop: 2 }}>{confirmPaidModal.recipient}</div>
+              <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Liên kết ví Payoneer nhận tiền của người chơi:</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--lime)", marginTop: 2, wordBreak: "break-all" }}>
+                <a href={confirmPaidModal.recipient?.startsWith("http") ? confirmPaidModal.recipient : `https://${confirmPaidModal.recipient}`} target="_blank" rel="noreferrer" style={{ color: "var(--lime)", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {confirmPaidModal.recipient} <ExternalLink size={14} />
+                </a>
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 8 }}>
                 <span>Tổng rút: <strong>{money(confirmPaidModal.usd_cents)}</strong></span>
                 <span>Phí 15%: <strong style={{ color: "var(--rose)" }}>-{money(confirmPaidModal.fee_cents || Math.round(confirmPaidModal.usd_cents * 0.15))}</strong></span>

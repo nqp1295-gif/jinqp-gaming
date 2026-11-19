@@ -1949,6 +1949,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
   const [fullscreen, setFullscreen] = useState(false);
   const [selectedBlockShape, setSelectedBlockShape] = useState<number>(0);
   const [now, setNow] = useState(Date.now());
+  const [timeLeft, setTimeLeft] = useState<number>(30);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
 
@@ -1958,7 +1959,28 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
     if ((game.id !== "reflex" && game.id !== "orbit") || !session || session.completed) return;
     const t = setInterval(() => setNow(Date.now()), 50);
     return () => clearInterval(t);
-  }, [game.id, session?.id, session?.round, session?.wave, session?.completed]);
+  }, [game.id, session?.id, session?.stage, session?.completed]);
+
+  // 30s COUNTDOWN TIMER PER STAGE (HẾT GIỜ => GAME OVER)
+  useEffect(() => {
+    if (!session || session.completed || session.gameOver) return;
+    const calcLeft = () => {
+      if (!session.stageDeadline) return 30;
+      return Math.max(0, Math.ceil((session.stageDeadline - Date.now()) / 1000));
+    };
+    setTimeLeft(calcLeft());
+
+    const timer = setInterval(() => {
+      const rem = calcLeft();
+      setTimeLeft(rem);
+      if (rem <= 0) {
+        clearInterval(timer);
+        move({ timeout: true });
+      }
+    }, 500);
+
+    return () => clearInterval(timer);
+  }, [session?.id, session?.stage, session?.version, session?.completed, session?.gameOver, session?.stageDeadline]);
 
   const start = async () => {
     setBusy(true);
@@ -2034,7 +2056,7 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
       <div className="game-modal">
         <div className="game-stage">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <span className="game-type">{game.category}</span>
+            <span className="game-type">{game.category} · 100 Màn Thử Thách</span>
             <button
               className="icon-button"
               onClick={() => setFullscreen(!fullscreen)}
@@ -2049,11 +2071,19 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               <img src={`/art/${game.art}.svg`} alt="" />
               <h2>{game.title}</h2>
               <p>{game.subtitle}</p>
+              <div style={{ margin: "12px 0 18px", display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span className="pill" style={{ background: "rgba(208,250,117,0.15)", color: "var(--lime)", border: "1px solid rgba(208,250,117,0.3)" }}>
+                  🏆 100 Màn Chơi (Tăng độ khó)
+                </span>
+                <span className="pill" style={{ background: "rgba(248,203,131,0.15)", color: "var(--amber)", border: "1px solid rgba(248,203,131,0.3)" }}>
+                  ⏱️ 30 Giây Mỗi Màn (Hết giờ = Game Over)
+                </span>
+              </div>
               {game.engine ? (
                 signedIn ? (
                   <button className="btn lime" onClick={start} disabled={busy}>
                     {busy ? <Spinner /> : <Play size={17} fill="currentColor" />}
-                    {tournament ? "Bắt đầu lượt thi đấu giải" : "Bắt đầu chơi"}
+                    {tournament ? "Bắt đầu lượt thi đấu giải" : "Bắt đầu chơi Màn 1"}
                   </button>
                 ) : (
                   <a className="btn lime" href="/signin-with-chatgpt?return_to=/" target="_top">
@@ -2065,42 +2095,60 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
               )}
             </div>
           ) : session.completed ? (
-            <div className="game-result">
-              <div className="trophy-circle"><Trophy size={44} /></div>
-              <span className="eyebrow subtle">THỬ THÁCH HOÀN THÀNH</span>
-              <h2>Làm tốt lắm!</h2>
-              <div className="score">{number(session.score)}<span>điểm</span></div>
-              {claimed !== null ? (
-                <div className="reward-received"><Coin size={24} /> +{number(claimed)} xu thử nghiệm đã vào ví</div>
-              ) : member ? (
-                <button className="btn lime" disabled={busy} onClick={claim}>
-                  {busy ? <Spinner /> : <Coin />} Nhận xu thành viên
+            session.gameOver ? (
+              <div className="game-result game-over">
+                <div className="trophy-circle alert" style={{ background: "rgba(232, 93, 117, 0.15)", border: "2px solid var(--rose)", color: "var(--rose)" }}>
+                  <CircleAlert size={44} />
+                </div>
+                <span className="eyebrow" style={{ color: "var(--rose)", fontWeight: 800 }}>HẾT THỜI GIAN 30S · GAME OVER</span>
+                <h2>Chưa qua màn!</h2>
+                <p style={{ margin: "6px 0 16px", color: "var(--muted)", fontSize: "14px" }}>
+                  Thời gian 30 giây đã hết trước khi bạn hoàn thành thử thách. Bạn dừng bước ở <strong>Màn {session.stage || 1} / 100</strong>.
+                </p>
+                <div className="score" style={{ color: "var(--text)" }}>{number(session.score)}<span>điểm</span></div>
+                <button className="btn lime" style={{ marginTop: "16px" }} disabled={busy} onClick={start}>
+                  <RefreshCw size={17} /> Chơi lại từ Màn 1
                 </button>
-              ) : (
-                <button className="btn lime" onClick={onMembership}>
-                  <Crown size={18} /> Khám phá thành viên để tích xu
-                </button>
-              )}
-              <button className="text-button" disabled={busy} onClick={start}><RefreshCw size={15} /> Chơi lại</button>
-            </div>
+              </div>
+            ) : (
+              <div className="game-result">
+                <div className="trophy-circle"><Trophy size={44} /></div>
+                <span className="eyebrow subtle">{(session.stage || 1) >= 100 ? "🏆 PHÁ ĐẢO TOÀN BỘ 100 MÀN!" : "THỬ THÁCH HOÀN THÀNH"}</span>
+                <h2>{(session.stage || 1) >= 100 ? "Bậc Thầy Xuất Chúng!" : "Làm tốt lắm!"}</h2>
+                <p style={{ margin: "4px 0 12px", color: "var(--lime)" }}>Vượt qua Màn {(session.stage || 1)} / 100</p>
+                <div className="score">{number(session.score)}<span>điểm</span></div>
+                {claimed !== null ? (
+                  <div className="reward-received"><Coin size={24} /> +{number(claimed)} xu thử nghiệm đã vào ví</div>
+                ) : member ? (
+                  <button className="btn lime" disabled={busy} onClick={claim}>
+                    {busy ? <Spinner /> : <Coin />} Nhận xu thành viên
+                  </button>
+                ) : (
+                  <button className="btn lime" onClick={onMembership}>
+                    <Crown size={18} /> Khám phá thành viên để tích xu
+                  </button>
+                )}
+                <button className="text-button" disabled={busy} onClick={start}><RefreshCw size={15} /> Chơi lại</button>
+              </div>
+            )
           ) : (
             <>
-              {(() => {
-                const engineType = session?.engine || game.engine || "reflex";
-                return (
-                  <div className="game-scorebar">
-                    <span>
-                      {engineType === "memory" ? `Ghép được ${session.matched?.length ? session.matched.length / 2 : 0}/8 cặp` :
-                       engineType === "number" ? `Câu hỏi ${(session.index || 0) + 1}/10` :
-                       engineType === "reflex" ? `Lượt phản xạ ${(session.round || 0) + 1}/5` :
-                       engineType === "blocks" ? `Lượt xếp ${session.turn || 1}/6 · Đã xóa ${session.linesCleared || 0} hàng` :
-                       engineType === "orbit" ? `Đợt né tránh ${(session.wave || 0) + 1}/8` :
-                       `Từ vựng ${(session.index || 0) + 1}/5`}
-                    </span>
-                    <strong>{session.score} điểm</strong>
+              {/* STAGE HUD: 100 STAGES & 30s COUNTDOWN TIMER */}
+              <div className="stage-hud-wrapper">
+                <div className="stage-level-badge">
+                  <Trophy size={16} /> Màn {session.stage || 1} / 100
+                </div>
+                <div className={`stage-countdown-box ${timeLeft <= 5 ? "urgent" : timeLeft <= 10 ? "warning" : ""}`} title="Bộ đếm ngược 30 giây cho mỗi màn">
+                  <Clock3 size={15} />
+                  <span>00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</span>
+                  <div className="stage-countdown-bar">
+                    <div className="stage-countdown-fill" style={{ width: `${Math.max(0, Math.min(100, (timeLeft / 30) * 100))}%` }} />
                   </div>
-                );
-              })()}
+                </div>
+                <div style={{ fontWeight: 800, color: "var(--amber)", fontSize: "13px" }}>
+                  {number(session.score)} đ
+                </div>
+              </div>
 
               {/* GAME 1: MEMORY */}
               {(session?.engine || game.engine) === "memory" && (
@@ -2504,19 +2552,20 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
     }
   };
 
-  // Handle Linking Payoneer Email
+  // Handle Linking Payoneer Link
   const submitLinkPayoneer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payoneerEmailInput.trim() || !payoneerEmailInput.includes("@")) {
-      notify("Vui lòng nhập địa chỉ email Payoneer hợp lệ.");
+    const link = payoneerEmailInput.trim();
+    if (!link || link.length < 5) {
+      notify("Vui lòng nhập đường dẫn liên kết ví Payoneer hợp lệ.");
       return;
     }
     setBusy(true);
     try {
-      await action("user.link_payoneer", { email: payoneerEmailInput.trim() });
+      await action("user.link_payoneer", { link });
       await reload();
       setShowLinkPayoneerModal(false);
-      notify(`Đã liên kết ví Payoneer thành công: ${payoneerEmailInput.trim()}`);
+      notify(`Đã liên kết link ví Payoneer thành công: ${link}`);
     } catch (e: any) {
       notify(e.message);
     } finally {
@@ -2565,7 +2614,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
       <div className="section-heading">
         <div>
           <span className="eyebrow subtle">TÀI CHÍNH & VÍ ĐIỆN TỬ JINQP</span>
-          <h1>Quản lý 2 Ví tách biệt<span className="pill">Ví Xu & Ví Chính</span></h1>
+          <h1>Ví Người Dùng</h1>
         </div>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button className="btn lime small" onClick={openRefill}>
@@ -2625,9 +2674,6 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
               {number(availableCoins)}
               <span style={{ fontSize: "1rem", color: "var(--amber)", fontWeight: 600 }}>xu</span>
             </div>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--muted)" }}>
-              Tương đương: <strong>${(availableCoins / 1000).toFixed(2)} USD</strong> (Tỷ lệ: 1.000 xu = $1.00 USD)
-            </p>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "12px", background: "rgba(0,0,0,0.25)", borderRadius: "10px", marginBottom: "16px" }}>
@@ -2671,10 +2717,12 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
               ${mainUsdBalance.toFixed(2)}
               <span style={{ fontSize: "1rem", color: "var(--muted)", fontWeight: 600 }}>USD</span>
             </div>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--muted)" }}>
-              Ví Payoneer liên kết:{" "}
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--muted)", wordBreak: "break-all" }}>
+              Liên kết ví Payoneer:{" "}
               {payoneerEmail ? (
-                <strong style={{ color: "#fff" }}>{payoneerEmail}</strong>
+                <a href={payoneerEmail.startsWith("http") ? payoneerEmail : `https://${payoneerEmail}`} target="_blank" rel="noreferrer" style={{ color: "var(--lime)", textDecoration: "underline", fontWeight: 600 }}>
+                  {payoneerEmail} <ExternalLink size={12} style={{ display: "inline" }} />
+                </a>
               ) : (
                 <span style={{ color: "var(--rose)" }}>Chưa liên kết</span>
               )}
@@ -2709,7 +2757,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
               <ArrowUpRight size={14} /> Rút tiền về Payoneer (Phí 15%)
             </button>
             <button className="btn secondary small" style={{ flex: 1 }} onClick={() => setShowLinkPayoneerModal(true)}>
-              <Link2 size={14} /> {payoneerEmail ? "Đổi ví Payoneer" : "Liên kết Payoneer"}
+              <Link2 size={14} /> {payoneerEmail ? "Đổi link ví Payoneer" : "Liên kết ví Payoneer"}
             </button>
           </div>
         </div>
@@ -3153,19 +3201,19 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
 
       {/* MODAL 3: LINK PAYONEER WALLET */}
       {showLinkPayoneerModal && (
-        <Modal title="Liên kết địa chỉ ví Payoneer" onClose={() => setShowLinkPayoneerModal(false)}>
+        <Modal title="Liên kết ví Payoneer nhận tiền" onClose={() => setShowLinkPayoneerModal(false)}>
           <form className="checkout-body" onSubmit={submitLinkPayoneer}>
-            <span className="eyebrow" style={{ color: "var(--lime)" }}><Link2 size={16} />LIÊN KẾT THANH TOÁN</span>
-            <h2>Địa chỉ ví Payoneer nhận tiền</h2>
+            <span className="eyebrow" style={{ color: "var(--lime)" }}><Link2 size={16} />LIÊN KẾT VÍ PAYONEER</span>
+            <h2>Đường dẫn liên kết ví Payoneer nhận tiền</h2>
             <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "16px", lineHeight: "1.5" }}>
-              Vui lòng nhập chính xác địa chỉ Email tài khoản Payoneer của bạn. Khi bạn tạo lệnh rút tiền từ Ví Chính, Admin sẽ thực hiện chuyển tiền thật vào địa chỉ Payoneer này.
+              Vui lòng nhập đường dẫn liên kết ví Payoneer của bạn. Khi bạn tạo lệnh rút tiền từ Ví Chính, Ban Quản Trị sẽ chuyển tiền thật trực tiếp vào liên kết ví này.
             </p>
 
-            <label>Email tài khoản Payoneer của bạn
+            <label>Đường dẫn liên kết ví Payoneer của bạn
               <input
                 required
-                type="email"
-                placeholder="vidu: email_payoneer@gmail.com"
+                type="text"
+                placeholder="VD: https://link.payoneer.com/... hoặc link ví Payoneer của bạn"
                 value={payoneerEmailInput}
                 onChange={e => setPayoneerEmailInput(e.target.value)}
                 style={{ marginTop: 6 }}
@@ -3174,7 +3222,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
 
             <div style={{ marginTop: 20 }}>
               <button className="btn lime full" type="submit" disabled={busy || !payoneerEmailInput.trim()}>
-                {busy ? <Spinner /> : <Check size={18} />} Lưu liên kết ví Payoneer
+                {busy ? <Spinner /> : <Link2 size={18} />} Lưu liên kết ví Payoneer
               </button>
             </div>
           </form>
