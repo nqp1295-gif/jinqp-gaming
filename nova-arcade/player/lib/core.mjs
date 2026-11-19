@@ -802,6 +802,7 @@ export async function simulatePayment(db, userId, orderId, now = Date.now(), act
 // -------------------------
 
 export async function createTransfer(db, userId, input, now = Date.now()) {
+  await checkAndProcessLevelUp(db, userId, now);
   const sender = await one(db, "SELECT level FROM app_users WHERE id=?", [userId]);
   if ((sender?.level || 1) < 10) {
     throw new AppError("Bạn cần đạt tối thiểu Cấp 10 để mở khóa tính năng Chuyển xu P2P.", 403, "LEVEL_LOCKED");
@@ -1654,9 +1655,9 @@ export async function linkPayoneer(db, userId, linkInput) {
 // -------------------------
 
 export async function createPayout(db, userId, input, now = Date.now()) {
-  const usdAmount = Number(input.usdAmount || (input.usdCents ? input.usdCents / 100 : 0));
-  if (isNaN(usdAmount) || usdAmount < 10) {
-    throw new AppError("Số tiền rút tối thiểu là $10.00 USD.", 400);
+  const usdAmount = Number(input.usdAmount || (input.usdCents ? input.usdCents / 100 : (input.coins ? input.coins / 1000 : 0)));
+  if (isNaN(usdAmount) || usdAmount < 1) {
+    throw new AppError("Số tiền rút tối thiểu là $1.00 USD.", 400);
   }
   const usdCents = Math.round(usdAmount * 100);
   const requestKey = key(input.requestKey);
@@ -1664,9 +1665,9 @@ export async function createPayout(db, userId, input, now = Date.now()) {
   const u = await one(db, "SELECT * FROM app_users WHERE id=?", [userId]);
   if (!u) throw new AppError("Người dùng không tồn tại.", 404);
 
-  // Requirement: Must link Payoneer wallet before withdrawing
-  const payoneerRecipient = (input.payoneerEmail || u.payoneer_email || "").trim().toLowerCase();
-  if (!payoneerRecipient || !payoneerRecipient.includes("@")) {
+  // Requirement: Must link Payoneer wallet before withdrawing (supports both link URL and email)
+  const payoneerRecipient = (input.payoneerEmail || input.recipient || u.payoneer_email || "").trim();
+  if (!payoneerRecipient || payoneerRecipient.length < 5) {
     throw new AppError("Bạn cần liên kết địa chỉ ví Payoneer vào tài khoản trước khi tạo lệnh rút tiền.", 400, "PAYONEER_NOT_LINKED");
   }
 
@@ -1762,9 +1763,13 @@ export async function payoutDecision(db, actor, input, now = Date.now()) {
         ] : [
           stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [p.usd_cents, acc(p.user_id, "main_usd")])
         ]),
-        ...posting(db, `payout-final:${p.id}`, paid ? "payout_paid" : "payout_return", p.user_id, "USD_CENT", [
+        ...posting(db, `payout-final:${p.id}`, paid ? "payout_paid" : "payout_return", p.user_id, "USD_CENT", paid ? [
           [acc(p.user_id, "main_usd_held"), -p.usd_cents],
-          [paid ? "system:services" : acc(p.user_id, "main_usd"), paid ? (p.net_cents || p.usd_cents) : p.usd_cents]
+          ["system:withdrawal_fees", p.fee_cents || 0],
+          ["system:services", p.net_cents || p.usd_cents]
+        ] : [
+          [acc(p.user_id, "main_usd_held"), -p.usd_cents],
+          [acc(p.user_id, "main_usd"), p.usd_cents]
         ], now),
         stmt(db, "UPDATE payouts SET status=?,external_ref=?,note=?,updated_at=? WHERE id=?", [
           state, paid ? externalRef : null, noteText, now, p.id

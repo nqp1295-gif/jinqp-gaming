@@ -2452,7 +2452,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
 
   // Withdrawal state (Ví Chính -> Payoneer)
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [withdrawUsdInput, setWithdrawUsdInput] = useState("10");
+  const [withdrawUsdInput, setWithdrawUsdInput] = useState("1");
 
   // Payoneer Linking modal
   const [showLinkPayoneerModal, setShowLinkPayoneerModal] = useState(false);
@@ -2520,8 +2520,8 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
       return;
     }
     const wAmount = Number(withdrawUsdInput);
-    if (isNaN(wAmount) || wAmount < 10) {
-      notify("Số tiền rút tối thiểu là $10.00 USD.");
+    if (isNaN(wAmount) || wAmount < 1) {
+      notify("Số tiền rút tối thiểu là $1.00 USD.");
       return;
     }
     if (wAmount > mainUsdBalance) {
@@ -3153,12 +3153,12 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
                 <input
                   required
                   type="number"
-                  min="10"
+                  min="1"
                   max={Math.min(mainUsdBalance, maxWithdrawalUsd)}
                   step="1"
                   value={withdrawUsdInput}
                   onChange={e => setWithdrawUsdInput(e.target.value)}
-                  placeholder="10"
+                  placeholder="1"
                 />
                 <span>USD</span>
               </div>
@@ -3190,7 +3190,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
               <button
                 className="btn lime full"
                 type="submit"
-                disabled={busy || Number(withdrawUsdInput) < 10 || Number(withdrawUsdInput) > mainUsdBalance || Number(withdrawUsdInput) > maxWithdrawalUsd}
+                disabled={busy || Number(withdrawUsdInput) < 1 || Number(withdrawUsdInput) > mainUsdBalance || Number(withdrawUsdInput) > maxWithdrawalUsd}
               >
                 {busy ? <Spinner /> : <ArrowUpRight size={18} />} Xác nhận tạo lệnh rút tiền
               </button>

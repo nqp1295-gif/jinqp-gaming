@@ -4,6 +4,7 @@ import {
   seed, ensureUser, bootstrap, createOrder, simulatePayment,
   createTransfer, joinTournament, submitTournamentScore, settleTournament,
   startGame, gameAction, claimReward, createPayout, payoutDecision,
+  requestCoinConversion, conversionDecision, linkPayoneer,
   adminAction, playerAction, AppError, TOPUP_PACKAGES
 } from "../lib/core.mjs";
 
@@ -61,7 +62,7 @@ async function runTests() {
   console.log("\n[TEST 1] Khởi tạo Database & Seed 6 game, 9 gói, chính sách quốc gia, giải đấu");
   await seed(db);
   const bootGuest = await bootstrap(db, null);
-  assert.strictEqual(bootGuest.games.length, 6, "Phải có đủ 6 tựa game trong catalog");
+  assert.strictEqual(bootGuest.games.length, 50, "Phải có đủ 50 tựa game trong catalog");
   assert.strictEqual(bootGuest.plans.length, 9, "Phải có đủ 9 gói thành viên");
   assert.strictEqual(bootGuest.topupPackages.length, 6, "Phải có đủ 6 gói nạp Playhop");
   assert.ok(bootGuest.tournaments.length >= 4, "Phải có ít nhất 4 giải đấu kỹ năng ban đầu");
@@ -74,17 +75,17 @@ async function runTests() {
   const userB = await ensureUser(db, { userId: "user-beta", displayName: "Trần Thị B", email: "beta@nova.test" });
 
   const topupOrder = await createOrder(db, userA.id, {
-    planId: "topup-750",
+    planId: "topup-50000",
     method: "qr",
     requestKey: "req-topup-001"
   });
-  assert.strictEqual(topupOrder.amount_cents, 700, "Gói 750 xu có giá $7.00");
+  assert.strictEqual(topupOrder.amount_cents, 5000, "Gói 50.000 xu có giá $50.00");
   assert.strictEqual(topupOrder.status, "pending");
 
   // Mô phỏng thanh toán hoàn tất
   await simulatePayment(db, userA.id, topupOrder.id);
   const walletA = await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userA.id}:available`).first();
-  assert.strictEqual(walletA.balance, 810, "750 xu + 60 xu thưởng = 810 xu trong ví");
+  assert.strictEqual(walletA.balance, 60000, "50.000 xu + 10.000 xu thưởng = 60.000 xu trong ví");
   console.log("✓ Nạp xu số dư thành công! Số dư khả dụng User A:", walletA.balance, "xu");
 
   // Kiểm tra tính cân bằng sổ cái kép
@@ -92,8 +93,9 @@ async function runTests() {
   assert.strictEqual(journalLines.s, 0, "Bút toán nạp xu phải có tổng Nợ - Có = 0 (cân đối tuyệt đối)");
   console.log("✓ Sổ cái kép cho giao dịch nạp cân bằng tuyệt đối (Tổng delta = 0)");
 
-  // 3. Chuyển số dư P2P giữa người dùng
-  console.log("\n[TEST 3] Chuyển xu P2P giữa người chơi A và B");
+  // 3. Chuyển số dư P2P giữa người dùng (yêu cầu Cấp 10+)
+  console.log("\n[TEST 3] Chuyển xu P2P giữa người chơi A và B (Mở khóa Cấp 10+)");
+  await db.prepare("UPDATE app_users SET play_time_seconds = 1800000 WHERE id = ?").bind(userA.id).run();
   const transfer = await createTransfer(db, userA.id, {
     recipient: "beta@nova.test",
     coins: 200,
@@ -103,13 +105,13 @@ async function runTests() {
   assert.strictEqual(transfer.status, "completed");
   const balA = (await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userA.id}:available`).first()).balance;
   const balB = (await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userB.id}:available`).first()).balance;
-  assert.strictEqual(balA, 610, "User A bị trừ 200 xu còn 610 xu");
+  assert.strictEqual(balA, 59800, "User A bị trừ 200 xu còn 59.800 xu");
   assert.strictEqual(balB, 200, "User B nhận được 200 xu");
 
   // Kiểm tra chặn chuyển quá số dư
   let errCaught = false;
   try {
-    await createTransfer(db, userA.id, { recipient: "beta@nova.test", coins: 10000, requestKey: "req-transfer-bad" });
+    await createTransfer(db, userA.id, { recipient: "beta@nova.test", coins: 100000, requestKey: "req-transfer-bad" });
   } catch (e) {
     errCaught = true;
     assert.ok(e instanceof AppError);
@@ -162,7 +164,8 @@ async function runTests() {
 
   // 5.1 Memory
   const memS = await startGame(db, userA.id, "memory");
-  assert.strictEqual(memS.cards.length, 16);
+  assert.ok(memS.cards.length >= 4);
+  assert.strictEqual(memS.stage, 1);
   const memA1 = await gameAction(db, userA.id, { sessionId: memS.id, version: 0, index: 0 });
   assert.strictEqual(memA1.version, 1);
   console.log("  ✓ Engine Memory Garden: OK");
@@ -176,7 +179,8 @@ async function runTests() {
 
   // 5.3 Reflex
   const refS = await startGame(db, userA.id, "reflex");
-  assert.strictEqual(refS.total, 5);
+  assert.ok(refS.goAt);
+  assert.strictEqual(refS.stage, 1);
   const refA1 = await gameAction(db, userA.id, { sessionId: refS.id, version: 0 });
   assert.strictEqual(refA1.version, 1);
   console.log("  ✓ Engine Neon Reflex: OK");
@@ -191,9 +195,11 @@ async function runTests() {
 
   // 5.5 Orbit
   const orbS = await startGame(db, userA.id, "orbit");
-  assert.strictEqual(orbS.totalWaves, 8);
-  const orbA1 = await gameAction(db, userA.id, { sessionId: orbS.id, version: 0, lane: 2 });
-  assert.strictEqual(orbA1.lane, 2, "Chuyển sang quỹ đạo 2 thành công");
+  assert.strictEqual(orbS.stage, 1);
+  // Find safe lane to pass stage 1
+  const safeLane = [0, 1, 2].find(l => !orbS.hazardLanes?.includes(l)) ?? 0;
+  const orbA1 = await gameAction(db, userA.id, { sessionId: orbS.id, version: 0, lane: safeLane });
+  assert.strictEqual(orbA1.stage, 2, "Vượt màn 1 và chuyển sang Màn 2 thành công");
   console.log("  ✓ Engine Orbit Runner: OK");
 
   // 5.6 Word
@@ -228,28 +234,35 @@ async function runTests() {
   assert.strictEqual(updatedVN.note, "Nghị định 147/2024: Đã rà soát tuân thủ");
   console.log("✓ Chính sách quốc gia hoạt động chính xác theo đặc tả Doc 03 & 04!");
 
-  // 7. Kiểm tra Rút tiền (Payout) & phê duyệt
-  console.log("\n[TEST 7] Tạo yêu cầu rút tiền (Payout), giữ xu & Admin duyệt");
+  // 7. Kiểm tra Quy đổi xu sang Ví Chính ($) & Rút tiền Payoneer (Payout)
+  console.log("\n[TEST 7] Đổi xu sang Ví Chính ($), liên kết ví Payoneer & Rút tiền");
+  // A. Liên kết ví Payoneer (bằng liên kết)
+  await linkPayoneer(db, userA.id, "https://link.payoneer.com/Token?t=96B839277F5348A3B7D90751C5477937&src=tpl");
+
+  // B. Đổi 2.000 xu sang $2.00 USD
+  const convReq = await requestCoinConversion(db, userA.id, { coins: 2000, requestKey: "conv-001" });
+  assert.strictEqual(convReq.status, "pending");
+  await conversionDecision(db, "admin:finance", { id: convReq.id, decision: "approve" });
+
+  const mainUsdBal = (await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userA.id}:main_usd`).first()).balance;
+  assert.strictEqual(mainUsdBal, 200, "Ví Chính nhận được $2.00 USD (200 cents)");
+
+  // C. Tạo lệnh rút tiền $2.00 USD từ Ví Chính (phí 15%: $0.30, thực nhận: $1.70)
   const payout = await createPayout(db, userA.id, {
-    coins: 1000,
-    recipient: "https://payoneer.com/receive/userA",
-    method: "link",
+    usdAmount: 2,
     requestKey: "req-payout-001"
   });
   assert.strictEqual(payout.status, "pending");
-  const heldA = (await db.prepare("SELECT balance FROM wallet_accounts WHERE id=?").bind(`${userA.id}:held`).first()).balance;
-  assert.strictEqual(heldA, 1000, "1.000 xu được chuyển sang trạng thái đang giữ");
+  assert.strictEqual(payout.fee_cents, 30, "Phí rút tiền 15% của $2.00 là 30 cents ($0.30)");
+  assert.strictEqual(payout.net_cents, 170, "Thực nhận 85% là 170 cents ($1.70)");
 
-  // Admin duyệt payout
+  // Admin duyệt và chuyển tiền qua Payoneer
   await payoutDecision(db, "admin:finance", { id: payout.id, decision: "approve" });
-  const approvedPayout = await db.prepare("SELECT status FROM payouts WHERE id=?").bind(payout.id).first();
-  assert.strictEqual(approvedPayout.status, "approved");
-
-  // Admin mô phỏng chi trả hoàn tất
-  await payoutDecision(db, "admin:finance", { id: payout.id, decision: "simulate_paid" });
-  const paidPayout = await db.prepare("SELECT status FROM payouts WHERE id=?").bind(payout.id).first();
+  await payoutDecision(db, "admin:finance", { id: payout.id, decision: "confirm_paid", externalRef: "PAY-96B839277F" });
+  const paidPayout = await db.prepare("SELECT status, external_ref FROM payouts WHERE id=?").bind(payout.id).first();
   assert.strictEqual(paidPayout.status, "paid");
-  console.log("✓ Quy trình rút tiền (Hold -> Approve -> Paid) hoàn tất và ghi sổ kép chuẩn xác!");
+  assert.strictEqual(paidPayout.external_ref, "PAY-96B839277F");
+  console.log("✓ Quy trình rút tiền Payoneer (Hold -> Approve -> Paid) hoàn tất và ghi sổ kép chuẩn xác!");
 
   // 8. Kiểm tra toàn diện sổ cái kép (Zero-sum double-entry ledger invariant)
   console.log("\n[TEST 8] Kiểm tra bất biến toàn diện sổ cái kép (Debit == Credit across entire system)");
