@@ -3579,18 +3579,13 @@ function ClaimPage({
 
   return (
     <section className="claim-page">
-      <div className="section-heading" style={{ marginBottom: 24, textAlign: "center" }}>
-        <div>
-          <span className="eyebrow" style={{ color: "#ffd700", justifyContent: "center" }}>
-            <Zap size={15} fill="#ffd700" /> MÁY CLAIM XU TỰ ĐỘNG
-          </span>
-          <h1 style={{ fontSize: "2.3rem", marginTop: 4 }}>
-            Khai thác năng lượng · <em>Tích lũy xu mỗi giờ</em>
-          </h1>
-          <p style={{ color: "var(--muted)", maxWidth: 640, margin: "8px auto 0" }}>
-            Mở khóa từ Cấp 10. Cứ mỗi 10 cấp tăng thêm sẽ mở khóa Máy Claim cấp cao hơn. Máy hoạt động tối đa 1 giờ mỗi phiên và tự động dừng.
-          </p>
-        </div>
+      <div style={{ marginBottom: 28, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
+        <span className="eyebrow" style={{ color: "#ffd700", display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "center", fontWeight: 700, letterSpacing: "1px", margin: "0 auto" }}>
+          <Zap size={15} fill="#ffd700" /> CLAIM XU
+        </span>
+        <h1 style={{ fontSize: "2.3rem", marginTop: 6, fontWeight: 800, fontStyle: "normal", letterSpacing: "-0.03em", color: "#ffffff", textAlign: "center" }}>
+          Khai thác năng lượng · Tích lũy xu mỗi giờ
+        </h1>
       </div>
 
       {/* CASE 1: USER NOT SIGNED IN */}
