@@ -85,6 +85,13 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
   const [adjustUserModal, setAdjustUserModal] = useState<any>(null);
   const [adjustHours, setAdjustHours] = useState(10);
   const [adjustCoins, setAdjustCoins] = useState(10000);
+  const [showGrantModal, setShowGrantModal] = useState(false);
+  const [grantUserId, setGrantUserId] = useState("");
+  const [grantPlanId, setGrantPlanId] = useState("gold-month");
+  const [grantNote, setGrantNote] = useState("Cấp quyền thành viên thủ công từ Ban Quản Trị");
+  const [confirmPaidModal, setConfirmPaidModal] = useState<any>(null);
+  const [payoutRefId, setPayoutRefId] = useState("");
+  const [payoutRefNote, setPayoutRefNote] = useState("Đã chuyển tiền qua Payoneer thành công");
   const [adminLoggedIn, setAdminLoggedIn] = useState(true);
 
   const handleResetPassword = async (u: any) => {
@@ -104,12 +111,13 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
 
   const nav = [
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
+    { id: "conversions", label: "Duyệt đổi xu ($)", icon: RefreshCw },
+    { id: "payouts", label: "Rút tiền Payoneer", icon: ArrowUpRight },
+    { id: "plans", label: "Gói thành viên", icon: Crown },
     { id: "giftcodes", label: "Mã Giftcode", icon: Gift },
     { id: "tournaments", label: "Giải đấu kỹ năng", icon: Trophy },
-    { id: "plans", label: "Gói thành viên", icon: Crown },
     { id: "orders", label: "Đơn nạp & dịch vụ", icon: CreditCard },
     { id: "transfers", label: "Chuyển số dư P2P", icon: Send },
-    { id: "payouts", label: "Yêu cầu rút", icon: ArrowUpRight },
     { id: "users", label: "Người chơi", icon: Users },
     { id: "games", label: "Kho game", icon: Gamepad2 },
     { id: "policies", label: "Chính sách thị trường", icon: Globe },
@@ -617,9 +625,21 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
 
               {page === "plans" && (
                 <>
-                  <div className="info-box">
-                    <SlidersHorizontal size={19} />
-                    <p>Thay đổi được lưu trong database chung và áp dụng cho đơn mới. Quyền lợi của đơn đã mua được giữ theo phiên bản lúc xác nhận.</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <div className="info-box" style={{ flex: 1, margin: 0 }}>
+                      <SlidersHorizontal size={19} />
+                      <p>Thay đổi được lưu trong database chung và áp dụng cho đơn mới. Quyền lợi của đơn đã mua được giữ theo phiên bản lúc xác nhận.</p>
+                    </div>
+                    <button
+                      className="btn lime"
+                      style={{ marginLeft: 16, whiteSpace: "nowrap", padding: "10px 18px", fontWeight: 700 }}
+                      onClick={() => {
+                        setGrantUserId("");
+                        setShowGrantModal(true);
+                      }}
+                    >
+                      <Crown size={16} /> Cấp gói thành viên thủ công
+                    </button>
                   </div>
                   <div className="plan-matrix">
                     {["bronze", "gold", "diamond"].map(t => {
@@ -679,39 +699,187 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                 </section>
               )}
 
+              {/* COIN TO USD CONVERSIONS APPROVAL */}
+              {page === "conversions" && (
+                <>
+                  <div className="mini-stats">
+                    <div><span>Chờ duyệt</span><strong>{(data.conversions || []).filter((c: any) => c.status === "pending").length}</strong></div>
+                    <div><span>Xu chờ quy đổi</span><strong style={{ color: "var(--amber)" }}>{num((data.conversions || []).filter((c: any) => c.status === "pending").reduce((a: number, c: any) => a + c.coins, 0))} xu</strong></div>
+                    <div><span>USD chuyển vào Ví Chính</span><strong style={{ color: "var(--lime)" }}>{money((data.conversions || []).filter((c: any) => c.status === "pending").reduce((a: number, c: any) => a + c.usd_cents, 0))}</strong></div>
+                  </div>
+                  <section className="panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>Duyệt quy đổi xu sang Ví Chính ($)</h2>
+                        <p>Người chơi yêu cầu đổi xu ảo sang số dư USD trên hệ thống JINQP (Tỷ lệ: 1.000 xu = $1.00 USD, Phí nạp/đổi: 0% Free).</p>
+                      </div>
+                      <SearchBox query={query} setQuery={setQuery} />
+                    </div>
+                    {(data.conversions || []).filter(search).length ? (
+                      <div className="table-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Thời gian / Mã đơn</th>
+                              <th>Người chơi</th>
+                              <th>Số xu đổi (Ví Xu)</th>
+                              <th>USD nhận (Ví Chính)</th>
+                              <th>Tỷ lệ quy đổi</th>
+                              <th>Trạng thái</th>
+                              <th>Xử lý</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(data.conversions || []).filter(search).map((c: any) => (
+                              <tr key={c.id}>
+                                <td>
+                                  <strong>#{c.id.slice(0, 8)}</strong>
+                                  <small>{date(c.created_at)}</small>
+                                </td>
+                                <td>
+                                  <strong>{c.user_name || "Người chơi"}</strong>
+                                  <small>{c.user_email}</small>
+                                </td>
+                                <td><strong style={{ color: "var(--amber)", fontSize: "1.05em" }}>{num(c.coins)} xu</strong></td>
+                                <td><strong style={{ color: "var(--lime)", fontSize: "1.05em" }}>{money(c.usd_cents)}</strong></td>
+                                <td><span className="pill">1.000 xu = $1.00</span></td>
+                                <td><Badge value={c.status} /></td>
+                                <td>
+                                  {c.status === "pending" ? (
+                                    <div className="row-actions">
+                                      <button
+                                        className="btn tiny lime"
+                                        disabled={busy}
+                                        onClick={async () => {
+                                          if (window.confirm(`Xác nhận DUYỆT đổi ${num(c.coins)} xu sang ${money(c.usd_cents)} vào Ví Chính cho ${c.user_email}?`)) {
+                                            await run("conversion.decision", { id: c.id, decision: "approve" }, "Đã duyệt quy đổi xu sang USD thành công!");
+                                          }
+                                        }}
+                                      >
+                                        Duyệt đổi
+                                      </button>
+                                      <button
+                                        className="text-button danger"
+                                        disabled={busy}
+                                        onClick={async () => {
+                                          const reason = window.prompt("Lý do từ chối quy đổi (xu sẽ hoàn trả lại Ví Xu):", "Không đủ điều kiện quy đổi");
+                                          if (reason !== null) {
+                                            await run("conversion.decision", { id: c.id, decision: "reject", note: reason }, "Đã từ chối và hoàn trả xu về Ví Xu.");
+                                          }
+                                        }}
+                                      >
+                                        Từ chối
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <small style={{ color: "var(--muted)" }}>{c.admin_note || "Đã xử lý"}</small>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <Empty message="Chưa có yêu cầu quy đổi xu nào." />
+                    )}
+                  </section>
+                </>
+              )}
+
+              {/* PAYOUT REQUESTS TO PAYONEER */}
               {page === "payouts" && (
                 <>
                   <div className="mini-stats">
-                    <div><span>Chờ duyệt</span><strong>{data.payouts.filter((p: any) => p.status === "pending").length}</strong></div>
-                    <div><span>Xu đang giữ</span><strong>{num(pending.reduce((a: number, p: any) => a + p.coins, 0))}</strong></div>
-                    <div><span>Chi thử đã hoàn tất</span><strong>{money(data.payouts.filter((p: any) => p.status === "paid").reduce((a: number, p: any) => a + p.usd_cents, 0))}</strong></div>
+                    <div><span>Chờ thanh toán</span><strong>{data.payouts.filter((p: any) => p.status === "pending").length}</strong></div>
+                    <div><span>Tổng USD rút (Gross)</span><strong>{money(data.payouts.filter((p: any) => p.status === "pending").reduce((a: number, p: any) => a + p.usd_cents, 0))}</strong></div>
+                    <div><span>Phí rút 15% (Hệ thống)</span><strong style={{ color: "var(--amber)" }}>{money(data.payouts.filter((p: any) => p.status === "pending").reduce((a: number, p: any) => a + (p.fee_cents || Math.round(p.usd_cents * 0.15)), 0))}</strong></div>
+                    <div><span>Thực chuyển Payoneer (85%)</span><strong style={{ color: "var(--lime)" }}>{money(data.payouts.filter((p: any) => p.status === "pending").reduce((a: number, p: any) => a + (p.net_cents || (p.usd_cents - Math.round(p.usd_cents * 0.15))), 0))}</strong></div>
                   </div>
+
+                  <div className="info-box" style={{ marginBottom: 16 }}>
+                    <ShieldCheck size={20} style={{ color: "var(--lime)", flexShrink: 0 }} />
+                    <div>
+                      <strong style={{ color: "var(--text)" }}>Quy chuẩn kiểm tra và chi trả tiền thật qua Payoneer:</strong>
+                      <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "var(--muted)", lineHeight: 1.5 }}>
+                        • Các số liệu trên web là điểm số và số dư nội bộ. Tiền thật chỉ tồn tại trong tài khoản Payoneer.<br />
+                        • Admin kiểm tra email Payoneer của người nhận, đăng nhập ví Payoneer của admin và chuyển đúng <strong>Thực nhận Payoneer (85%)</strong>.<br />
+                        • Bấm <strong>"Xác nhận đã chuyển"</strong>, nhập mã GD Payoneer để hệ thống lưu sổ cái và gửi thông báo hoàn tất đến tài khoản người chơi.
+                      </p>
+                    </div>
+                  </div>
+
                   <section className="panel">
-                    <div className="panel-heading"><h2>Hàng đợi yêu cầu rút</h2><SearchBox query={query} setQuery={setQuery} /></div>
+                    <div className="panel-heading"><h2>Yêu cầu rút tiền về ví Payoneer</h2><SearchBox query={query} setQuery={setQuery} /></div>
                     {data.payouts.filter(search).length ? (
                       <div className="table-scroll">
                         <table>
                           <thead>
                             <tr>
-                              <th>Yêu cầu / người chơi</th><th>Xu / USD</th><th>Phương thức</th><th>Trạng thái</th><th>Xử lý</th>
+                              <th>Thời gian / Mã</th>
+                              <th>Người chơi</th>
+                              <th>Tổng rút (Gross)</th>
+                              <th>Phí rút (15%)</th>
+                              <th>Thực chuyển Payoneer</th>
+                              <th>Email Payoneer nhận</th>
+                              <th>Trạng thái</th>
+                              <th>Xử lý</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {data.payouts.filter(search).map((p: any) => (
-                              <tr key={p.id}>
-                                <td><strong>{p.user_name.split("@")[0]}</strong><small>#{p.id.slice(0, 8)} · {date(p.created_at)}</small></td>
-                                <td><strong>{num(p.coins)} xu</strong><small>{money(p.usd_cents)}</small></td>
-                                <td><span>{p.method === "qr" ? "Mã QR" : "Link ví"}</span><small className="truncate" title={p.recipient}>{p.recipient}</small></td>
-                                <td><Badge value={p.status} /></td>
-                                <td>
-                                  <div className="row-actions">
-                                    {p.status === "pending" && <button className="btn tiny" onClick={() => setDecision({ type: "payout", decision: "approve", item: p })} disabled={busy}>Duyệt</button>}
-                                    {p.status === "approved" && <button className="btn tiny" onClick={() => setDecision({ type: "payout", decision: "simulate_paid", item: p })} disabled={busy}>Mô phỏng chi</button>}
-                                    {["pending", "approved"].includes(p.status) && <button className="text-button danger" onClick={() => setDecision({ type: "payout", decision: "reject", item: p })} disabled={busy}>Từ chối</button>}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                            {data.payouts.filter(search).map((p: any) => {
+                              const fee = p.fee_cents || Math.round(p.usd_cents * 0.15);
+                              const net = p.net_cents || (p.usd_cents - fee);
+                              return (
+                                <tr key={p.id}>
+                                  <td>
+                                    <strong>#{p.id.slice(0, 8)}</strong>
+                                    <small>{date(p.created_at)}</small>
+                                  </td>
+                                  <td>
+                                    <strong>{(p.user_name || "").split("@")[0]}</strong>
+                                    <small>#{p.user_id?.slice(0, 8)}</small>
+                                  </td>
+                                  <td><strong>{money(p.usd_cents)}</strong></td>
+                                  <td><span style={{ color: "var(--rose)", fontWeight: 600 }}>-{money(fee)}</span></td>
+                                  <td><strong style={{ color: "var(--lime)", fontSize: "1.1em" }}>{money(net)}</strong></td>
+                                  <td>
+                                    <strong style={{ color: "var(--text)" }}>{p.recipient}</strong>
+                                    <small>Địa chỉ Payoneer</small>
+                                  </td>
+                                  <td><Badge value={p.status} /></td>
+                                  <td>
+                                    {p.status === "pending" || p.status === "approved" ? (
+                                      <div className="row-actions">
+                                        <button
+                                          className="btn tiny lime"
+                                          disabled={busy}
+                                          onClick={() => setConfirmPaidModal(p)}
+                                        >
+                                          Xác nhận đã chuyển
+                                        </button>
+                                        <button
+                                          className="text-button danger"
+                                          disabled={busy}
+                                          onClick={async () => {
+                                            const reason = window.prompt("Lý do từ chối rút tiền (USD sẽ được hoàn trả lại Ví Chính):", "Thông tin Payoneer chưa chính xác");
+                                            if (reason !== null) {
+                                              await run("payout.decision", { id: p.id, decision: "reject", note: reason }, "Đã từ chối lệnh rút và hoàn trả $ về Ví Chính.");
+                                            }
+                                          }}
+                                        >
+                                          Từ chối
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <small style={{ color: "var(--lime)" }}>Mã GD: {p.external_ref || "N/A"}</small>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -724,19 +892,23 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
 
               {page === "users" && (
                 <section className="panel">
-                  <div className="panel-heading"><h2>Người chơi của JINQP</h2><SearchBox query={query} setQuery={setQuery} /></div>
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Người chơi của JINQP</h2>
+                      <p>Quản lý tài khoản, Ví Xu, Ví Chính ($), liên kết Payoneer và quyền thành viên.</p>
+                    </div>
+                    <SearchBox query={query} setQuery={setQuery} />
+                  </div>
                   {data.users.filter(search).length ? (
                     <div className="table-scroll">
                       <table>
                         <thead>
                           <tr>
                             <th>Người chơi</th>
-                            <th>Quốc gia</th>
                             <th>Cấp độ</th>
-                            <th>Giờ chơi</th>
-                            <th>Xu đã nạp</th>
-                            <th>Xu khả dụng</th>
-                            <th>Xu đang giữ</th>
+                            <th>Ví Xu (Coins)</th>
+                            <th>Ví Chính ($ USD)</th>
+                            <th>Ví Payoneer liên kết</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                           </tr>
@@ -744,16 +916,42 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                         <tbody>
                           {data.users.filter(search).map((u: any) => (
                             <tr key={u.id}>
-                              <td><strong>{u.name.split("@")[0]}</strong><small>{u.email}</small></td>
-                              <td><span className="pill">{u.country}</span></td>
-                              <td><strong style={{ color: "var(--lime)" }}>Lv. {u.level || 1}</strong></td>
-                              <td><small>{((u.play_time_seconds || 0) / 3600).toFixed(1)}h</small></td>
-                              <td>{num(u.total_coins_bought || 0)} xu</td>
-                              <td>{num(u.available || 0)} xu</td>
-                              <td>{num(u.held || 0)} xu</td>
+                              <td>
+                                <strong>{u.name.split("@")[0]}</strong>
+                                <small>{u.email} · #{u.id.slice(0, 8)}</small>
+                              </td>
+                              <td>
+                                <strong style={{ color: "var(--lime)" }}>Lv. {u.level || 1}</strong>
+                                <small>{((u.play_time_seconds || 0) / 3600).toFixed(1)}h chơi</small>
+                              </td>
+                              <td>
+                                <strong style={{ color: "var(--amber)" }}>{num(u.available || 0)} xu</strong>
+                                <small>Đang giữ: {num(u.held || 0)} xu</small>
+                              </td>
+                              <td>
+                                <strong style={{ color: "var(--lime)" }}>{money(u.main_usd || 0)}</strong>
+                                <small>Đang giữ: {money(u.main_usd_held || 0)}</small>
+                              </td>
+                              <td>
+                                {u.payoneer_email ? (
+                                  <strong style={{ color: "var(--text)" }}>{u.payoneer_email}</strong>
+                                ) : (
+                                  <small style={{ color: "var(--muted)" }}>Chưa liên kết</small>
+                                )}
+                              </td>
                               <td><span className={`enabled ${!u.banned ? "on" : ""}`}>{u.banned ? "Tạm khóa" : "Hoạt động"}</span></td>
                               <td>
-                                <div style={{ display: "flex", gap: 6 }}>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                  <button
+                                    className="btn tiny lime"
+                                    onClick={() => {
+                                      setGrantUserId(u.id);
+                                      setShowGrantModal(true);
+                                    }}
+                                    title="Cấp gói thành viên thủ công cho tài khoản này"
+                                  >
+                                    👑 Cấp VIP
+                                  </button>
                                   <button className="text-button" onClick={() => setAdjustUserModal(u)} title="Cộng giờ chơi hoặc xu nạp để test tăng cấp">
                                     + Cấp/Xu
                                   </button>
@@ -1038,6 +1236,139 @@ export default function Control({ viewer }: { viewer: { name: string; email: str
                 }}
               >
                 Cập nhật cấp & xu
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: GRANT MEMBERSHIP MANUALLY */}
+      {showGrantModal && (
+        <Modal title="👑 Cấp gói thành viên thủ công cho Người chơi" close={() => setShowGrantModal(false)}>
+          <div style={{ padding: "16px 20px" }}>
+            <p style={{ color: "var(--muted)", marginBottom: 14, fontSize: "0.88rem", lineHeight: 1.5 }}>
+              Cấp quyền thành viên đặc quyền trực tiếp từ Ban Quản Trị mà không cần qua quy trình thanh toán.
+            </p>
+            <div className="form-group">
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>CHỌN NGƯỜI CHƠI NHẬN GÓI</label>
+              <select
+                value={grantUserId}
+                onChange={e => setGrantUserId(e.target.value)}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              >
+                <option value="">-- Chọn tài khoản người chơi --</option>
+                {(data?.users || []).map((u: any) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.email}) - Lv.{u.level || 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>CHỌN GÓI THÀNH VIÊN</label>
+              <select
+                value={grantPlanId}
+                onChange={e => setGrantPlanId(e.target.value)}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              >
+                <option value="bronze-month">Gói Đồng (Bronze) - 1 Tháng</option>
+                <option value="bronze-year">Gói Đồng (Bronze) - 1 Năm</option>
+                <option value="gold-month">Gói Vàng (Gold) - 1 Tháng (VIP)</option>
+                <option value="gold-year">Gói Vàng (Gold) - 1 Năm (VIP)</option>
+                <option value="diamond-month">Gói Kim Cương (Diamond) - 1 Tháng (PRO)</option>
+                <option value="diamond-year">Gói Kim Cương (Diamond) - 1 Năm (PRO)</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>GHI CHÚ / LÝ DO CẤP GÓI</label>
+              <input
+                type="text"
+                value={grantNote}
+                onChange={e => setGrantNote(e.target.value)}
+                placeholder="VD: Tri ân người chơi VIP, giải thưởng sự kiện..."
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
+            <div className="modal-actions" style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn secondary" onClick={() => setShowGrantModal(false)}>Hủy</button>
+              <button
+                className="btn lime"
+                disabled={busy || !grantUserId}
+                onClick={async () => {
+                  const ok = await run("membership.grant", {
+                    userId: grantUserId,
+                    planId: grantPlanId,
+                    note: grantNote
+                  }, "Đã cấp gói thành viên thủ công thành công cho người chơi!");
+                  if (ok) {
+                    setShowGrantModal(false);
+                    setGrantUserId("");
+                  }
+                }}
+              >
+                👑 Kích hoạt gói thành viên
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: CONFIRM PAYOUT PAID VIA PAYONEER */}
+      {confirmPaidModal && (
+        <Modal title="Xác nhận đã chuyển tiền qua Payoneer" close={() => setConfirmPaidModal(null)}>
+          <div style={{ padding: "16px 20px" }}>
+            <div style={{ background: "rgba(180, 248, 86, 0.08)", border: "1px solid rgba(180, 248, 86, 0.2)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Ví Payoneer nhận tiền của người chơi:</div>
+              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--lime)", marginTop: 2 }}>{confirmPaidModal.recipient}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 8 }}>
+                <span>Tổng rút: <strong>{money(confirmPaidModal.usd_cents)}</strong></span>
+                <span>Phí 15%: <strong style={{ color: "var(--rose)" }}>-{money(confirmPaidModal.fee_cents || Math.round(confirmPaidModal.usd_cents * 0.15))}</strong></span>
+                <span>Thực chuyển Payoneer: <strong style={{ color: "var(--lime)", fontSize: "1.05em" }}>{money(confirmPaidModal.net_cents || (confirmPaidModal.usd_cents - Math.round(confirmPaidModal.usd_cents * 0.15)))}</strong></span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>MÃ GIAO DỊCH PAYONEER (TRANSACTION ID) *</label>
+              <input
+                type="text"
+                placeholder="VD: PAY-82910482 hoặc mã ID Payoneer..."
+                value={payoutRefId}
+                onChange={e => setPayoutRefId(e.target.value)}
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)", fontWeight: 600 }}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: 14 }}>
+              <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", color: "var(--muted)" }}>GHI CHÚ GỬI NGƯỜI CHƠI</label>
+              <input
+                type="text"
+                value={payoutRefNote}
+                onChange={e => setPayoutRefNote(e.target.value)}
+                placeholder="VD: Đã chuyển tiền qua Payoneer thành công"
+                style={{ width: "100%", padding: "10px 12px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn secondary" onClick={() => setConfirmPaidModal(null)}>Hủy</button>
+              <button
+                className="btn lime"
+                disabled={busy || !payoutRefId.trim()}
+                onClick={async () => {
+                  const ok = await run("payout.decision", {
+                    id: confirmPaidModal.id,
+                    decision: "confirm_paid",
+                    externalRef: payoutRefId.trim(),
+                    note: payoutRefNote.trim()
+                  }, "Đã xác nhận thanh toán Payoneer thành công và gửi thông báo cho người chơi!");
+                  if (ok) {
+                    setConfirmPaidModal(null);
+                    setPayoutRefId("");
+                    setPayoutRefNote("Đã chuyển tiền qua Payoneer thành công");
+                  }
+                }}
+              >
+                Xác nhận đã chuyển thành công
               </button>
             </div>
           </div>

@@ -4,12 +4,12 @@ export const TIERS = { bronze: { name: "Đồng", rank: 1 }, gold: { name: "Vàn
 export const PERIODS = { week: "Tuần", month: "Tháng", year: "Năm" };
 
 export const TOPUP_PACKAGES = [
-  { id: "topup-1000", coins: 1000, bonus: 0, priceCents: 100, label: "Khởi đầu", tag: "1.000 xu" },
-  { id: "topup-5000", coins: 5000, bonus: 500, priceCents: 500, label: "Tập sự", tag: "Tặng 500 xu" },
-  { id: "topup-10000", coins: 10000, bonus: 1500, priceCents: 1000, label: "Cao thủ (Mở Cấp 10)", tag: "Đột phá Cấp 10", popular: true },
-  { id: "topup-20000", coins: 20000, bonus: 3500, priceCents: 2000, label: "Chiến binh (Mở Cấp 20)", tag: "Đột phá Cấp 20" },
-  { id: "topup-50000", coins: 50000, bonus: 10000, priceCents: 5000, label: "VIP Đặc quyền (Mở Cấp 50)", tag: "Mở Rút tiền Payoneer", best: true },
-  { id: "topup-100000", coins: 100000, bonus: 25000, priceCents: 10000, label: "Huyền thoại (Mở Cấp 100)", tag: "Nâng hạn mức rút $500" },
+  { id: "topup-1000", coins: 1000, bonus: 0, priceCents: 100, label: "Khởi đầu", tag: "Phí nạp 0% (Free)" },
+  { id: "topup-5000", coins: 5000, bonus: 500, priceCents: 500, label: "Tập sự", tag: "Tặng 500 xu · Phí nạp 0%" },
+  { id: "topup-10000", coins: 10000, bonus: 1500, priceCents: 1000, label: "Cao thủ (Mở Cấp 10)", tag: "Mở Chuyển P2P · Phí nạp 0%", popular: true },
+  { id: "topup-20000", coins: 20000, bonus: 3500, priceCents: 2000, label: "Chiến binh (Mở Cấp 20)", tag: "Đột phá Cấp 20 · Phí nạp 0%" },
+  { id: "topup-50000", coins: 50000, bonus: 10000, priceCents: 5000, label: "VIP Đặc quyền (Mở Cấp 50)", tag: "Mở Rút Payoneer · Phí nạp 0%", best: true },
+  { id: "topup-100000", coins: 100000, bonus: 25000, priceCents: 10000, label: "Huyền thoại (Mở Cấp 100)", tag: "Hạn mức rút $500 · Phí nạp 0%" },
 ];
 
 export const COUNTRIES = [
@@ -204,6 +204,11 @@ export async function seed(db) {
       message text NOT NULL, kind text DEFAULT 'system' NOT NULL,
       read integer DEFAULT 0 NOT NULL, created_at integer NOT NULL
     );`,
+    `CREATE TABLE IF NOT EXISTS conversion_requests (
+      id text PRIMARY KEY, user_id text NOT NULL, coins integer NOT NULL,
+      usd_cents integer NOT NULL, rate integer NOT NULL, status text DEFAULT 'pending' NOT NULL,
+      request_key text NOT NULL, admin_note text, created_at integer NOT NULL, settled_at integer
+    );`,
   ];
 
   for (const q of createStatements) {
@@ -215,7 +220,10 @@ export async function seed(db) {
     "ALTER TABLE app_users ADD COLUMN play_time_seconds integer DEFAULT 0",
     "ALTER TABLE app_users ADD COLUMN total_coins_bought integer DEFAULT 0",
     "ALTER TABLE app_users ADD COLUMN level integer DEFAULT 1",
-    "ALTER TABLE app_users ADD COLUMN last_payout_time integer DEFAULT 0"
+    "ALTER TABLE app_users ADD COLUMN last_payout_time integer DEFAULT 0",
+    "ALTER TABLE app_users ADD COLUMN payoneer_email text",
+    "ALTER TABLE payouts ADD COLUMN fee_cents integer DEFAULT 0",
+    "ALTER TABLE payouts ADD COLUMN net_cents integer DEFAULT 0",
   ];
   for (const ac of alterColumns) {
     try { await db.prepare(ac).run(); } catch {}
@@ -238,7 +246,7 @@ export async function seed(db) {
   } catch {}
 
   const ver = (await one(db, "SELECT value FROM app_settings WHERE key='seed_version'"))?.value;
-  if (ver === "4.0") return;
+  if (ver === "5.0") return;
 
   const commands = [];
   const prices = { bronze: [300, 900, 7900], gold: [700, 1900, 17900], diamond: [1500, 3900, 34900] };
@@ -334,7 +342,10 @@ export async function seed(db) {
     ["system:services", "USD_CENT"],
     ["system:clearing", "USD_CENT"],
     ["system:tournament_pool", "COIN"],
-    ["system:topup_reserve", "COIN"]
+    ["system:topup_reserve", "COIN"],
+    ["system:usd_reserve", "USD_CENT"],
+    ["system:coin_conversions", "COIN"],
+    ["system:withdrawal_fees", "USD_CENT"],
   ]) {
     commands.push(stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,NULL,'system',?,0) ON CONFLICT(id) DO NOTHING", [a, unit]));
   }
@@ -379,7 +390,7 @@ export async function seed(db) {
       currency: "USD"
     })
   ]));
-  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','4.0') ON CONFLICT(key) DO UPDATE SET value='4.0'", []));
+  commands.push(stmt(db, "INSERT INTO app_settings (key,value) VALUES ('seed_version','5.0') ON CONFLICT(key) DO UPDATE SET value='5.0'", []));
 
   await db.batch(commands);
 }
@@ -391,6 +402,7 @@ export async function ensureUser(db, user, now = Date.now()) {
   await db.batch([
     stmt(db, "INSERT INTO app_users (id,name,email,country,banned,created_at,play_time_seconds,total_coins_bought,level) VALUES (?,?,?,'VN',0,?,0,0,1) ON CONFLICT(id) DO UPDATE SET name=COALESCE(excluded.name, app_users.name),email=COALESCE(excluded.email, app_users.email)", [uid, userName, user.email || null, now]),
     ...["available", "held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'COIN',0) ON CONFLICT(id) DO NOTHING", [acc(uid, k), uid, k])),
+    ...["main_usd", "main_usd_held"].map(k => stmt(db, "INSERT INTO wallet_accounts (id,user_id,kind,unit,balance) VALUES (?,?,?,'USD_CENT',0) ON CONFLICT(id) DO NOTHING", [acc(uid, k), uid, k])),
   ]);
   const u = await one(db, "SELECT * FROM app_users WHERE id=?", [uid]);
   if (u.banned) throw new AppError("Tài khoản đang tạm khóa. Vui lòng liên hệ hỗ trợ.", 403);
@@ -604,7 +616,7 @@ export async function bootstrap(db, user) {
 
   const u = await ensureUser(db, user), now = Date.now();
   const levelInfo = await checkAndProcessLevelUp(db, u.id, now);
-  const userAccounts = await rows(db, "SELECT kind,balance FROM wallet_accounts WHERE user_id=?", [u.id]);
+  const userAccounts = await rows(db, "SELECT kind,unit,balance FROM wallet_accounts WHERE user_id=?", [u.id]);
   const userNotifications = await rows(db, "SELECT * FROM user_notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50", [u.id]);
   const unreadCount = (await one(db, "SELECT COUNT(*) as n FROM user_notifications WHERE user_id=? AND read=0", [u.id]))?.n || 0;
   const userTransfers = await rows(db, `
@@ -615,16 +627,28 @@ export async function bootstrap(db, user) {
     WHERE t.sender_id=? OR t.recipient_id=?
     ORDER BY t.created_at DESC LIMIT 30
   `, [u.id, u.id]);
+  const userConversions = await rows(db, "SELECT * FROM conversion_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 30", [u.id]);
+
+  const availableCoins = userAccounts.find(a => a.kind === "available")?.balance || 0;
+  const heldCoins = userAccounts.find(a => a.kind === "held")?.balance || 0;
+  const mainUsdBalance = userAccounts.find(a => a.kind === "main_usd")?.balance || 0;
+  const mainUsdHeldBalance = userAccounts.find(a => a.kind === "main_usd_held")?.balance || 0;
 
   result.user = {
     id: u.id,
     name: u.name,
     email: u.email,
     country: u.country,
+    payoneerEmail: u.payoneer_email || null,
     level: levelInfo?.level || u.level || 1,
     levelInfo: levelInfo || computeLevelInfo(u.play_time_seconds, u.total_coins_bought),
     membership: await membership(db, u.id),
     accounts: userAccounts,
+    availableCoins,
+    heldCoins,
+    mainUsdBalance,
+    mainUsdHeldBalance,
+    conversions: userConversions,
     earnedToday: (await one(db, "SELECT total FROM daily_rewards WHERE id=?", [`${u.id}:${day(now)}`]))?.total || 0,
     favorites: (await rows(db, "SELECT game_id FROM favorites WHERE user_id=?", [u.id])).map(x => x.game_id),
     orders: await rows(db, "SELECT id,plan_id,amount_cents,status,method,created_at,expires_at,snapshot_json FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 30", [u.id]),
@@ -778,6 +802,11 @@ export async function simulatePayment(db, userId, orderId, now = Date.now(), act
 // -------------------------
 
 export async function createTransfer(db, userId, input, now = Date.now()) {
+  const sender = await one(db, "SELECT level FROM app_users WHERE id=?", [userId]);
+  if ((sender?.level || 1) < 10) {
+    throw new AppError("Bạn cần đạt tối thiểu Cấp 10 để mở khóa tính năng Chuyển xu P2P.", 403, "LEVEL_LOCKED");
+  }
+
   const coins = integer(input.coins, 10, 1000000, "Số xu chuyển");
   const requestKey = key(input.requestKey);
   const recipientTarget = str(input.recipient, 3, 150, "Người nhận");
@@ -1341,69 +1370,214 @@ export async function claimReward(db, userId, sessionId, now = Date.now()) {
 }
 
 // -------------------------
-// PAYOUT (WITHDRAWAL)
+// COIN CONVERSION & MAIN USD WALLET
+// -------------------------
+
+export async function requestCoinConversion(db, userId, input, now = Date.now()) {
+  const coins = integer(input.coins, 1000, 10000000, "Số xu quy đổi");
+  if (coins % 10 !== 0) throw new AppError("Số xu quy đổi phải là bội số của 10 (10 xu = $0.01 USD).");
+  const requestKey = key(input.requestKey);
+
+  const old = await one(db, "SELECT * FROM conversion_requests WHERE user_id=? AND request_key=?", [userId, requestKey]);
+  if (old) return old;
+
+  const wallet = await one(db, "SELECT balance FROM wallet_accounts WHERE id=?", [acc(userId)]);
+  if (!wallet || wallet.balance < coins) {
+    throw new AppError("Số dư xu khả dụng không đủ để quy đổi.", 409, "INSUFFICIENT_FUNDS");
+  }
+
+  // Rate: 1000 coins = 100 USD cents ($1.00 USD) => 10 coins = 1 cent
+  const usdCents = Math.round(coins / 10);
+  const conversionId = id();
+
+  try {
+    await db.batch([
+      stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=? AND balance>=?", [coins, acc(userId), coins]),
+      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [coins, acc(userId, "held")]),
+      stmt(db, `INSERT INTO conversion_requests (id,user_id,coins,usd_cents,rate,status,request_key,created_at)
+        VALUES (?,?,?,?,1000,'pending',?,?)`, [
+        conversionId, userId, coins, usdCents, requestKey, now
+      ]),
+      ...posting(db, `conversion-hold:${conversionId}`, "coin_conversion_hold", userId, "COIN", [
+        [acc(userId), -coins],
+        [acc(userId, "held"), coins]
+      ], now),
+      auditStatement(db, userId, "wallet.coin_conversion_requested", conversionId, `Yêu cầu đổi ${coins} xu sang $${(usdCents / 100).toFixed(2)} USD`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+        id(), userId, "⏳ Đã gửi yêu cầu đổi xu sang Ví Chính ($)",
+        `Yêu cầu quy đổi ${new Intl.NumberFormat("vi-VN").format(coins)} xu sang $${(usdCents / 100).toFixed(2)} USD đã được ghi nhận. Ban Quản Trị sẽ kiểm tra và cộng USD vào Ví Chính của bạn sớm nhất.`,
+        now
+      ])
+    ]);
+  } catch (e) {
+    const dup = await one(db, "SELECT * FROM conversion_requests WHERE user_id=? AND request_key=?", [userId, requestKey]);
+    if (dup) return dup;
+    throw e;
+  }
+
+  return one(db, "SELECT * FROM conversion_requests WHERE id=?", [conversionId]);
+}
+
+export async function conversionDecision(db, actor, input, now = Date.now()) {
+  const req = await one(db, "SELECT * FROM conversion_requests WHERE id=?", [input.id]);
+  if (!req) throw new AppError("Không tìm thấy yêu cầu quy đổi.", 404);
+  if (req.status !== "pending") throw new AppError("Yêu cầu này đã được xử lý trước đó.", 409);
+
+  const decision = str(input.decision, 2, 20, "Quyết định");
+  const note = input.note ? str(input.note, 1, 500, "Ghi chú") : (decision === "approve" ? "Đã duyệt quy đổi xu sang USD" : "Từ chối yêu cầu đổi xu");
+
+  if (decision === "approve") {
+    await db.batch([
+      // Deduct coins from held, debit to system:coin_conversions
+      stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=?", [req.coins, acc(req.user_id, "held")]),
+      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id='system:coin_conversions'", [req.coins]),
+      // Credit USD cents to user's main_usd wallet!
+      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [req.usd_cents, acc(req.user_id, "main_usd")]),
+      stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id='system:usd_reserve'", [req.usd_cents]),
+      ...posting(db, `conversion-approved:${req.id}`, "coin_conversion_settled", req.user_id, "COIN", [
+        [acc(req.user_id, "held"), -req.coins],
+        ["system:coin_conversions", req.coins]
+      ], now),
+      ...posting(db, `conversion-credit:${req.id}`, "usd_wallet_credit", req.user_id, "USD_CENT", [
+        [acc(req.user_id, "main_usd"), req.usd_cents],
+        ["system:usd_reserve", -req.usd_cents]
+      ], now),
+      stmt(db, "UPDATE conversion_requests SET status='approved',admin_note=?,settled_at=? WHERE id=? AND status='pending'", [
+        note, now, req.id
+      ]),
+      auditStatement(db, actor, "conversion.approved", req.id, `Duyệt đổi ${req.coins} xu sang $${(req.usd_cents / 100).toFixed(2)} USD cho ${req.user_id}`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+        id(), req.user_id, "✅ Quy đổi xu sang Ví Chính ($) thành công!",
+        `Ban Quản Trị đã DUYỆT yêu cầu đổi ${new Intl.NumberFormat("vi-VN").format(req.coins)} xu! Bạn đã nhận $${(req.usd_cents / 100).toFixed(2)} USD vào Ví Chính. Bạn có thể dùng số dư này để rút về Payoneer bất cứ lúc nào!`,
+        now
+      ])
+    ]);
+  } else if (decision === "reject") {
+    await db.batch([
+      // Return coins back to user available
+      stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=?", [req.coins, acc(req.user_id, "held")]),
+      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [req.coins, acc(req.user_id)]),
+      ...posting(db, `conversion-rejected:${req.id}`, "coin_conversion_refund", req.user_id, "COIN", [
+        [acc(req.user_id, "held"), -req.coins],
+        [acc(req.user_id), req.coins]
+      ], now),
+      stmt(db, "UPDATE conversion_requests SET status='rejected',admin_note=?,settled_at=? WHERE id=? AND status='pending'", [
+        note, now, req.id
+      ]),
+      auditStatement(db, actor, "conversion.rejected", req.id, `Từ chối đổi xu: ${note}`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+        id(), req.user_id, "❌ Yêu cầu quy đổi xu chưa được duyệt",
+        `Yêu cầu đổi ${new Intl.NumberFormat("vi-VN").format(req.coins)} xu của bạn chưa được duyệt. Số xu đã được hoàn trả lại Ví Xu của bạn. Lý do: ${note}`,
+        now
+      ])
+    ]);
+  } else {
+    throw new AppError("Quyết định không hợp lệ.", 400);
+  }
+
+  return one(db, "SELECT * FROM conversion_requests WHERE id=?", [req.id]);
+}
+
+export async function linkPayoneer(db, userId, emailInput) {
+  const email = str(emailInput, 5, 100, "Email ví Payoneer").trim().toLowerCase();
+  if (!email.includes("@") || !email.includes(".")) throw new AppError("Email Payoneer không đúng định dạng.", 400);
+
+  await stmt(db, "UPDATE app_users SET payoneer_email=? WHERE id=?", [email, userId]).run();
+  const now = Date.now();
+  try {
+    await stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+      id(), userId, "🔗 Đã liên kết ví Payoneer thành công!",
+      `Tài khoản của bạn đã liên kết thành công địa chỉ ví Payoneer: [${email}]. Giờ đây bạn có thể tạo lệnh rút tiền từ Ví Chính về địa chỉ này khi đạt điều kiện.`,
+      now
+    ]).run();
+  } catch {}
+
+  return { success: true, payoneerEmail: email };
+}
+
+// -------------------------
+// PAYOUT (WITHDRAWAL FROM VÍ CHÍNH TO PAYONEER)
 // -------------------------
 
 export async function createPayout(db, userId, input, now = Date.now()) {
-  const coins = integer(input.coins, 1000, 10000000, "Số xu");
-  const cents = coinCents(coins);
+  const usdAmount = Number(input.usdAmount || (input.usdCents ? input.usdCents / 100 : 0));
+  if (isNaN(usdAmount) || usdAmount < 10) {
+    throw new AppError("Số tiền rút tối thiểu là $10.00 USD.", 400);
+  }
+  const usdCents = Math.round(usdAmount * 100);
   const requestKey = key(input.requestKey);
-  const recipient = safeWalletLink(input.recipient);
-  const method = str(input.method, 2, 20, "Phương thức");
-
-  if (!["qr", "link"].includes(method)) throw new AppError("Phương thức không hợp lệ.");
 
   const u = await one(db, "SELECT * FROM app_users WHERE id=?", [userId]);
   if (!u) throw new AppError("Người dùng không tồn tại.", 404);
-  const lvlInfo = computeLevelInfo(u.play_time_seconds || 0, u.total_coins_bought || 0);
 
+  // Requirement: Must link Payoneer wallet before withdrawing
+  const payoneerRecipient = (input.payoneerEmail || u.payoneer_email || "").trim().toLowerCase();
+  if (!payoneerRecipient || !payoneerRecipient.includes("@")) {
+    throw new AppError("Bạn cần liên kết địa chỉ ví Payoneer vào tài khoản trước khi tạo lệnh rút tiền.", 400, "PAYONEER_NOT_LINKED");
+  }
+
+  // Update payoneer_email if changed or newly provided
+  if (!u.payoneer_email || u.payoneer_email !== payoneerRecipient) {
+    await stmt(db, "UPDATE app_users SET payoneer_email=? WHERE id=?", [payoneerRecipient, userId]).run();
+  }
+
+  const lvlInfo = computeLevelInfo(u.play_time_seconds || 0, u.total_coins_bought || 0);
   if (lvlInfo.level < 50) {
-    throw new AppError("Tính năng rút tiền chưa khả dụng cho tài khoản này.", 403);
+    throw new AppError("Bạn cần đạt tối thiểu Cấp 50 để mở khóa quyền rút tiền về ví Payoneer.", 403, "LEVEL_LOCKED");
   }
 
   const maxUsd = lvlInfo.level >= 100 ? 500 : 50;
   const maxCents = maxUsd * 100;
-  if (cents > maxCents) {
-    throw new AppError(`Hạn mức rút tối đa hiện tại là $${maxUsd} USD cho mỗi giao dịch.`, 400);
+  if (usdCents > maxCents) {
+    throw new AppError(`Hạn mức rút tối đa cho Cấp ${lvlInfo.level} là $${maxUsd}.00 USD mỗi ngày.`, 400);
   }
 
   const dayAgo = now - 24 * 3600 * 1000;
   const todayPayout = await one(db, "SELECT COUNT(*) as n FROM payouts WHERE user_id=? AND created_at>? AND status != 'rejected'", [userId, dayAgo]);
   if (todayPayout?.n >= 1) {
-    throw new AppError("Bạn đã thực hiện yêu cầu rút tiền hôm nay. Mỗi ngày chỉ được rút tối đa 1 lần.", 429);
+    throw new AppError("Bạn đã thực hiện yêu cầu rút tiền hôm nay. Mỗi ngày chỉ được tạo tối đa 1 lệnh rút.", 429);
   }
 
   const old = await one(db, "SELECT * FROM payouts WHERE user_id=? AND request_key=?", [userId, requestKey]);
-  if (old) {
-    if (old.coins !== coins || old.recipient !== recipient || old.method !== method) {
-      throw new AppError("Mã yêu cầu đã dùng với nội dung khác.", 409);
-    }
-    return old;
+  if (old) return old;
+
+  // Check Ví Chính (main_usd) balance
+  const mainUsdWallet = await one(db, "SELECT balance FROM wallet_accounts WHERE id=?", [acc(userId, "main_usd")]);
+  if (!mainUsdWallet || mainUsdWallet.balance < usdCents) {
+    throw new AppError("Số dư Ví Chính ($) không đủ để thực hiện lệnh rút.", 409, "INSUFFICIENT_FUNDS");
   }
 
+  // Requirement 5: Withdrawal fee is 15% / request
+  const feeCents = Math.round(usdCents * 0.15);
+  const netCents = usdCents - feeCents;
   const payoutId = id();
+
   try {
     await db.batch([
-      stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=? AND balance>=?", [coins, acc(userId), coins]),
-      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [coins, acc(userId, "held")]),
-      stmt(db, `INSERT INTO payouts (id,user_id,coins,usd_cents,recipient,method,status,request_key,created_at,updated_at)
-        VALUES (?,?,?,?,?,?,'pending',?,?,?)`, [
-        payoutId, userId, coins, cents, recipient, method, requestKey, now, now
+      stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=? AND balance>=?", [usdCents, acc(userId, "main_usd"), usdCents]),
+      stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [usdCents, acc(userId, "main_usd_held")]),
+      stmt(db, `INSERT INTO payouts (id,user_id,coins,usd_cents,fee_cents,net_cents,recipient,method,status,request_key,created_at,updated_at)
+        VALUES (?,?,0,?,?,?,?,'payoneer','pending',?,?,?)`, [
+        payoutId, userId, usdCents, feeCents, netCents, payoneerRecipient, requestKey, now, now
       ]),
-      ...posting(db, `payout-hold:${payoutId}`, "payout_hold", userId, "COIN", [
-        [acc(userId), -coins],
-        [acc(userId, "held"), coins]
+      ...posting(db, `payout-hold:${payoutId}`, "payout_hold", userId, "USD_CENT", [
+        [acc(userId, "main_usd"), -usdCents],
+        [acc(userId, "main_usd_held"), usdCents]
       ], now),
+      auditStatement(db, userId, "wallet.payout_requested", payoutId, `Rút $${(usdCents / 100).toFixed(2)} USD (Phí 15%: $${(feeCents / 100).toFixed(2)}, Thực nhận: $${(netCents / 100).toFixed(2)}) về ${payoneerRecipient}`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+        id(), userId, "💸 Đã gửi yêu cầu rút tiền về Payoneer!",
+        `Lệnh rút $${(usdCents / 100).toFixed(2)} USD (Phí 15%: $${(feeCents / 100).toFixed(2)} USD, Thực nhận: $${(netCents / 100).toFixed(2)} USD) về ví [${payoneerRecipient}] đã được gửi tới Ban Quản Trị. Quản trị viên sẽ kiểm tra và chuyển tiền thật qua Payoneer.`,
+        now
+      ])
     ]);
   } catch (e) {
     const duplicate = await one(db, "SELECT * FROM payouts WHERE user_id=? AND request_key=?", [userId, requestKey]);
-    if (duplicate && duplicate.coins === coins && duplicate.recipient === recipient && duplicate.method === method) return duplicate;
+    if (duplicate) return duplicate;
     throw e;
   }
 
-  const p = await one(db, "SELECT * FROM payouts WHERE id=?", [payoutId]);
-  if (!p) throw new AppError("Số dư khả dụng không đủ.", 409, "INSUFFICIENT_FUNDS");
-  return p;
+  return one(db, "SELECT * FROM payouts WHERE id=?", [payoutId]);
 }
 
 export async function payoutDecision(db, actor, input, now = Date.now()) {
@@ -1414,26 +1588,41 @@ export async function payoutDecision(db, actor, input, now = Date.now()) {
     if (p.status !== "pending") throw new AppError("Yêu cầu đã được xử lý.", 409);
     await db.batch([
       stmt(db, "UPDATE payouts SET status='approved',approved_by=?,updated_at=? WHERE id=? AND status='pending'", [actor, now, p.id]),
-      auditStatement(db, actor, "payout.approved", p.id, "Duyệt yêu cầu rút sandbox", now)
+      auditStatement(db, actor, "payout.approved", p.id, "Duyệt lệnh rút tiền (chờ xác nhận chuyển Payoneer)", now)
     ]);
-  } else if (["reject", "simulate_paid"].includes(input.decision)) {
-    const paid = input.decision === "simulate_paid";
-    if (paid ? p.status !== "approved" : !["pending", "approved"].includes(p.status)) {
+  } else if (["reject", "confirm_paid", "simulate_paid"].includes(input.decision)) {
+    const paid = input.decision === "confirm_paid" || input.decision === "simulate_paid";
+    if (paid ? !["pending", "approved"].includes(p.status) : !["pending", "approved"].includes(p.status)) {
       throw new AppError("Trạng thái yêu cầu không phù hợp.", 409);
     }
     const state = paid ? "paid" : "rejected";
+    const externalRef = input.externalRef ? str(input.externalRef, 2, 100, "Mã giao dịch Payoneer") : `PAY-${now.toString(36).toUpperCase()}`;
+    const noteText = str(input.note || (paid ? `Đã chuyển $${((p.net_cents || p.usd_cents) / 100).toFixed(2)} USD qua ví Payoneer` : "Không đủ điều kiện rút tiền"), 1, 500, "Ghi chú");
+
     try {
       await db.batch([
-        stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=?", [p.coins, acc(p.user_id, "held")]),
-        ...(paid ? [] : [stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [p.coins, acc(p.user_id)])]),
-        ...posting(db, `payout-final:${p.id}`, paid ? "payout_paid" : "payout_return", p.user_id, "COIN", [
-          [acc(p.user_id, "held"), -p.coins],
-          [paid ? "system:payout" : acc(p.user_id), p.coins]
+        stmt(db, "UPDATE wallet_accounts SET balance=balance-? WHERE id=?", [p.usd_cents, acc(p.user_id, "main_usd_held")]),
+        ...(paid ? [
+          stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id='system:withdrawal_fees'", [p.fee_cents || 0]),
+          stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id='system:services'", [p.net_cents || p.usd_cents]),
+        ] : [
+          stmt(db, "UPDATE wallet_accounts SET balance=balance+? WHERE id=?", [p.usd_cents, acc(p.user_id, "main_usd")])
+        ]),
+        ...posting(db, `payout-final:${p.id}`, paid ? "payout_paid" : "payout_return", p.user_id, "USD_CENT", [
+          [acc(p.user_id, "main_usd_held"), -p.usd_cents],
+          [paid ? "system:services" : acc(p.user_id, "main_usd"), paid ? (p.net_cents || p.usd_cents) : p.usd_cents]
         ], now),
         stmt(db, "UPDATE payouts SET status=?,external_ref=?,note=?,updated_at=? WHERE id=?", [
-          state, paid ? `sandbox-payout:${p.id}` : null, str(input.note || (paid ? "Đối tác mô phỏng xác nhận chi trả" : "Không đủ điều kiện thử nghiệm"), 1, 500, "Ghi chú"), now, p.id
+          state, paid ? externalRef : null, noteText, now, p.id
         ]),
-        auditStatement(db, paid ? "sandbox-provider" : actor, `payout.${state}`, p.id, `Actor: ${actor}; không chi tiền thật`, now),
+        auditStatement(db, actor, `payout.${state}`, p.id, `Actor: ${actor}; Giao dịch Payoneer: ${externalRef}`, now),
+        stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'wallet',0,?)`, [
+          id(), p.user_id, paid ? "🎉 Rút tiền Payoneer thành công!" : "❌ Lệnh rút tiền bị từ chối",
+          paid
+            ? `Admin đã thực hiện chuyển tiền thật vào ví Payoneer [${p.recipient}]! Số tiền: $${((p.net_cents || p.usd_cents) / 100).toFixed(2)} USD (sau phí 15%). Mã giao dịch Payoneer: ${externalRef}.`
+            : `Lệnh rút $${(p.usd_cents / 100).toFixed(2)} USD của bạn đã bị từ chối. Số tiền đã được hoàn trả lại Ví Chính. Lý do: ${noteText}.`,
+          now
+        ])
       ]);
     } catch (e) {
       const current = await one(db, "SELECT status FROM payouts WHERE id=?", [p.id]);
@@ -1478,6 +1667,7 @@ export async function adminAction(db, actor, action, input = {}) {
     const activeMemberships = (await one(db, "SELECT COUNT(DISTINCT user_id) AS n FROM memberships WHERE starts_at<=? AND ends_at>?", [Date.now(), Date.now()]))?.n || 0;
     const totalEarned = (await one(db, "SELECT COALESCE(SUM(coins),0) AS n FROM reward_claims"))?.n || 0;
     const pendingPayouts = (await one(db, "SELECT COUNT(*) AS n FROM payouts WHERE status IN ('pending','approved')"))?.n || 0;
+    const pendingConversions = (await one(db, "SELECT COUNT(*) AS n FROM conversion_requests WHERE status='pending'"))?.n || 0;
     const totalTournaments = (await one(db, "SELECT COUNT(*) AS n FROM tournaments"))?.n || 0;
     const totalTransfers = (await one(db, "SELECT COUNT(*) AS n FROM wallet_transfers"))?.n || 0;
 
@@ -1485,10 +1675,16 @@ export async function adminAction(db, actor, action, input = {}) {
       sandbox: true,
       livePayments: false,
       users: await rows(db, `
-        SELECT u.*, a.balance AS available, h.balance AS held
+        SELECT u.*,
+          COALESCE(a.balance, 0) AS available,
+          COALESCE(h.balance, 0) AS held,
+          COALESCE(m.balance, 0) AS main_usd,
+          COALESCE(mh.balance, 0) AS main_usd_held
         FROM app_users u
         LEFT JOIN wallet_accounts a ON a.id = u.id || ':available'
         LEFT JOIN wallet_accounts h ON h.id = u.id || ':held'
+        LEFT JOIN wallet_accounts m ON m.id = u.id || ':main_usd'
+        LEFT JOIN wallet_accounts mh ON mh.id = u.id || ':main_usd_held'
         ORDER BY u.created_at DESC LIMIT 100
       `),
       plans: (await rows(db, "SELECT * FROM plans")).map(p => ({ ...p, perks: parse(p.perks_json) })),
@@ -1497,6 +1693,12 @@ export async function adminAction(db, actor, action, input = {}) {
         FROM orders o
         JOIN app_users u ON u.id = o.user_id
         ORDER BY o.created_at DESC LIMIT 100
+      `),
+      conversions: await rows(db, `
+        SELECT c.*, u.name AS user_name, u.email AS user_email
+        FROM conversion_requests c
+        JOIN app_users u ON u.id = c.user_id
+        ORDER BY c.created_at DESC LIMIT 100
       `),
       payouts: await rows(db, `
         SELECT p.*, u.name AS user_name
@@ -1529,6 +1731,7 @@ export async function adminAction(db, actor, action, input = {}) {
         memberships: activeMemberships,
         earned: totalEarned,
         pending: pendingPayouts,
+        pendingConversions: pendingConversions,
         tournaments: totalTournaments,
         transfers: totalTransfers,
       }
@@ -1615,6 +1818,38 @@ export async function adminAction(db, actor, action, input = {}) {
   }
 
   if (action === "payout.decision") return payoutDecision(db, actor, input);
+  if (action === "conversion.decision") return conversionDecision(db, actor, input);
+
+  if (action === "membership.grant") {
+    const targetUserId = str(input.userId, 1, 100, "Người nhận");
+    const planId = str(input.planId, 3, 50, "Gói thành viên");
+    const note = str(input.note || "Cấp quyền thành viên thủ công từ Ban Quản Trị", 1, 500, "Ghi chú");
+
+    const targetUser = await one(db, "SELECT * FROM app_users WHERE id=? OR LOWER(email)=LOWER(?)", [targetUserId, targetUserId]);
+    if (!targetUser) throw new AppError("Không tìm thấy người dùng phù hợp.", 404);
+
+    const plan = await one(db, "SELECT * FROM plans WHERE id=?", [planId]);
+    if (!plan) throw new AppError("Gói thành viên không tồn tại.", 404);
+
+    const now = Date.now();
+    const last = await one(db, "SELECT MAX(ends_at) AS ends_at FROM memberships WHERE user_id=? AND plan_id=?", [targetUser.id, plan.id]);
+    const start = Math.max(now, last?.ends_at || 0);
+    const end = periodEnd(start, plan.period);
+    const orderId = `admin-grant:${id()}`;
+
+    await db.batch([
+      stmt(db, "INSERT INTO memberships (id,user_id,plan_id,order_id,starts_at,ends_at,terms_json) VALUES (?,?,?,?,?,?,?)", [
+        id(), targetUser.id, plan.id, orderId, start, end, JSON.stringify({ ...plan, manual_grant: true, granted_by: actor, note })
+      ]),
+      auditStatement(db, actor, action, targetUser.id, `Cấp thủ công gói ${planId} cho ${targetUser.email} đến ${new Date(end).toISOString().slice(0, 10)}`, now),
+      stmt(db, `INSERT INTO user_notifications (id,user_id,title,message,kind,read,created_at) VALUES (?,?,?,?,'membership',0,?)`, [
+        id(), targetUser.id, `👑 Chúc mừng! Bạn đã được cấp gói thành viên ${plan.id.toUpperCase()}!`,
+        `Ban Quản Trị đã kích hoạt gói thành viên đặc quyền cho tài khoản của bạn. Hạn sử dụng đến: ${new Date(end).toLocaleDateString("vi-VN")}. Lời nhắn: ${note}`,
+        now
+      ])
+    ]);
+    return { success: true, userId: targetUser.id, planId, startsAt: start, endsAt: end };
+  }
 
   if (action === "user.toggle") {
     const value = input.banned ? 1 : 0;
@@ -1719,6 +1954,8 @@ export async function playerAction(db, userId, action, input = {}) {
   if (action === "game.start") return startGame(db, userId, str(input.gameId, 1, 40, "Game"));
   if (action === "game.action") return gameAction(db, userId, input);
   if (action === "game.claim") return claimReward(db, userId, str(input.sessionId, 1, 100, "Phiên"));
+  if (action === "wallet.convert_coins") return requestCoinConversion(db, userId, input);
+  if (action === "user.link_payoneer") return linkPayoneer(db, userId, input.email);
   if (action === "payout.create") return createPayout(db, userId, input);
   if (action === "review.create") return createGameReview(db, userId, input);
 

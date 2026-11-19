@@ -919,6 +919,8 @@ export default function Arcade({ viewer }: { viewer: { name: string; email: stri
                   }}
                   notify={setToast}
                   t={t}
+                  data={data}
+                  reload={reload}
                 />
               )}
 
@@ -2131,16 +2133,35 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
                 </form>
               )}
 
-              {/* GAME 3: REFLEX */}
+              {/* GAME 3: REFLEX / ACTION */}
               {(session?.engine || game.engine) === "reflex" && (
-                <div className="reflex-board">
-                  <button className={`reaction-target ${now >= session.goAt ? "go" : ""}`} disabled={busy} onClick={() => move({})}>
-                    <Zap size={48} />
-                    <strong>{now >= session.goAt ? "CHẠM NGAY!" : "CHỜ TÍN HIỆU"}</strong>
-                    <span>{now >= session.goAt ? "Nhanh tay và chính xác" : "Đừng chạm vội…"}</span>
-                  </button>
-                  <p>{session.feedback}</p>
-                </div>
+                game.category === "Hành động" ? (
+                  <div className="action-combat-arena">
+                    <button
+                      className={`action-target-card ${now >= session.goAt ? "strike-ready" : ""}`}
+                      disabled={busy}
+                      onClick={() => move({})}
+                    >
+                      <Flame size={44} color={now >= session.goAt ? "#ff4757" : "#888"} />
+                      <strong style={{ fontSize: "18px", color: now >= session.goAt ? "#ff4757" : "#aaa" }}>
+                        {now >= session.goAt ? "⚡ TUNG ĐÒN TẤT SÁT!" : "ĐANG RÌNH MỒI..."}
+                      </strong>
+                      <span className="action-hud-text">
+                        {now >= session.goAt ? "Chém chính xác trong chớp mắt" : "Chờ đối thủ lộ sơ hở"}
+                      </span>
+                    </button>
+                    <p style={{ color: "var(--amber)", fontSize: "12px" }}>{session.feedback}</p>
+                  </div>
+                ) : (
+                  <div className="reflex-board">
+                    <button className={`reaction-target ${now >= session.goAt ? "go" : ""}`} disabled={busy} onClick={() => move({})}>
+                      <Zap size={48} />
+                      <strong>{now >= session.goAt ? "CHẠM NGAY!" : "CHỜ TÍN HIỆU"}</strong>
+                      <span>{now >= session.goAt ? "Nhanh tay và chính xác" : "Đừng chạm vội…"}</span>
+                    </button>
+                    <p>{session.feedback}</p>
+                  </div>
+                )
               )}
 
               {/* GAME 4: BLOCKS DISTRICT */}
@@ -2191,39 +2212,83 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
                 </div>
               )}
 
-              {/* GAME 5: ORBIT RUNNER */}
+              {/* GAME 5: ORBIT RUNNER / RACING */}
               {(session?.engine || game.engine) === "orbit" && (
-                <div className="orbit-arena">
-                  <div className="orbit-track-wrap">
-                    <div className={`orbit-circle lane-0 ${session.hazardLanes.includes(0) ? "hazard" : ""}`} />
-                    <div className={`orbit-circle lane-1 ${session.hazardLanes.includes(1) ? "hazard" : ""}`} />
-                    <div className={`orbit-circle lane-2 ${session.hazardLanes.includes(2) ? "hazard" : ""}`} />
+                game.category === "Đua xe" ? (
+                  <div className="racing-arena">
+                    <div className="racing-track-wrap">
+                      {[0, 1, 2].map(laneIdx => (
+                        <div
+                          key={laneIdx}
+                          className={`racing-lane ${session.hazardLanes.includes(laneIdx) ? "hazard" : ""}`}
+                        >
+                          <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>
+                            {laneIdx === 0 ? "TRÁI" : laneIdx === 1 ? "GIỮA" : "PHẢI"}
+                          </span>
+                          {session.hazardLanes.includes(laneIdx) && (
+                            <div className="racing-obstacle" title="Chướng ngại vật!">⚠️</div>
+                          )}
+                          <div style={{ height: "40px" }} />
+                        </div>
+                      ))}
 
-                    {/* Ship representation */}
-                    <div
-                      className="orbit-ship"
-                      style={{
-                        top: session.lane === 0 ? "85px" : session.lane === 1 ? "50px" : "15px",
-                        left: "126px"
-                      }}
-                    >
-                      <Rocket size={16} />
+                      {/* Moving Car */}
+                      <div
+                        className="racing-car-elem"
+                        style={{
+                          left: session.lane === 0 ? "31px" : session.lane === 1 ? "138px" : "245px"
+                        }}
+                      >
+                        🏎️
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="orbit-controls">
-                    <button className={`btn ${session.lane === 0 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 0 })}>
-                      Quỹ đạo Trong
-                    </button>
-                    <button className={`btn ${session.lane === 1 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 1 })}>
-                      Quỹ đạo Giữa
-                    </button>
-                    <button className={`btn ${session.lane === 2 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 2 })}>
-                      Quỹ đạo Ngoài
-                    </button>
+                    <div className="racing-controls">
+                      <button className={`btn ${session.lane === 0 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 0 })}>
+                        Làn Trái
+                      </button>
+                      <button className={`btn ${session.lane === 1 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 1 })}>
+                        Làn Giữa
+                      </button>
+                      <button className={`btn ${session.lane === 2 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 2 })}>
+                        Làn Phải
+                      </button>
+                    </div>
+                    <p style={{ fontSize: "11px", color: "var(--amber)" }}>{session.feedback}</p>
                   </div>
-                  <p style={{ fontSize: "11px", color: "var(--amber)" }}>{session.feedback}</p>
-                </div>
+                ) : (
+                  <div className="orbit-arena">
+                    <div className="orbit-track-wrap">
+                      <div className={`orbit-circle lane-0 ${session.hazardLanes.includes(0) ? "hazard" : ""}`} />
+                      <div className={`orbit-circle lane-1 ${session.hazardLanes.includes(1) ? "hazard" : ""}`} />
+                      <div className={`orbit-circle lane-2 ${session.hazardLanes.includes(2) ? "hazard" : ""}`} />
+
+                      {/* Ship representation */}
+                      <div
+                        className="orbit-ship"
+                        style={{
+                          top: session.lane === 0 ? "85px" : session.lane === 1 ? "50px" : "15px",
+                          left: "126px"
+                        }}
+                      >
+                        <Rocket size={16} />
+                      </div>
+                    </div>
+
+                    <div className="orbit-controls">
+                      <button className={`btn ${session.lane === 0 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 0 })}>
+                        Quỹ đạo Trong
+                      </button>
+                      <button className={`btn ${session.lane === 1 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 1 })}>
+                        Quỹ đạo Giữa
+                      </button>
+                      <button className={`btn ${session.lane === 2 ? "lime" : "secondary"} small`} onClick={() => move({ lane: 2 })}>
+                        Quỹ đạo Ngoài
+                      </button>
+                    </div>
+                    <p style={{ fontSize: "11px", color: "var(--amber)" }}>{session.feedback}</p>
+                  </div>
+                )
               )}
 
               {/* GAME 6: WORD VOYAGE */}
@@ -2258,12 +2323,13 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
           <span className="game-type">{game.category}</span>
           <h3>Cách chơi</h3>
           <p>
-            {game.id === "memory" ? "Lật hai thẻ để tìm hình giống nhau. Ghép đủ 8 cặp với ít lượt nhất có thể." :
-             game.id === "number" ? "Giải 10 phép tính nhẩm. Điền đáp án rồi nhấn Enter. Mỗi câu đúng cộng điểm." :
-             game.id === "reflex" ? "Chờ mục tiêu chuyển xanh rồi chạm thật nhanh. Chạm sớm không đạt." :
-             game.id === "blocks" ? "Chọn khối hình và đặt vào ô trống 8x8. Xếp đủ hàng hoặc cột để xóa và ghi điểm combo!" :
-             game.id === "orbit" ? "Chuyển làn phi thuyền giữa 3 quỹ đạo để tránh vùng thiên thạch đang cảnh báo." :
-             "Sắp xếp lại các chữ cái bị xáo trộn theo gợi ý có sẵn để tìm ra từ chính xác."}
+            {game.category === "Đua xe" ? "Chuyển làn xe linh hoạt giữa Làn Trái, Làn Giữa và Làn Phải để né tránh xe cản và các khúc cua tử thần ở tốc độ cao!" :
+             game.category === "Hành động" ? "Tập trung cao độ, quan sát kỹ sơ hở của đối thủ và chạm tung chiêu tất sát ngay trong tích tắc khi tín hiệu kích hoạt!" :
+             game.category === "Không gian" ? "Điều khiển phi thuyền chuyển đổi giữa 3 tầng quỹ đạo vũ trụ để tránh các vành đai thiên thạch và hố đen tử thần!" :
+             game.category === "Trí tuệ" ? "Thử thách tư duy logic, ghi nhớ ma trận và giải các phép toán tốc độ cao với độ chuẩn xác tuyệt đối." :
+             game.category === "Giải đố" ? "Vận dụng óc phán đoán, phân tích gợi ý và giải mã các câu đố hóc búa để vượt qua màn chơi." :
+             game.category === "Xếp hình" ? "Chọn các khối hình và sắp xếp khít vào bảng lưới để xóa hàng/cột và kích hoạt chuỗi combo điểm kỷ lục!" :
+             "Chờ mục tiêu chuyển xanh rồi chạm thật nhanh để phản xạ chính xác trong từng mili-giây!"}
           </p>
           <div className="guide-rule" />
           <Coin size={25} />
@@ -2322,37 +2388,69 @@ function GamePlayer({ game, tournament, member, signedIn, reviews, onClose, onMe
 }
 
 // -------------------------------------------------------------
-// WALLET PAGE WITH P2P TRANSFER
+// WALLET PAGE - HỆ THỐNG 2 VÍ TÁCH BIỆT (VÍ XU & VÍ CHÍNH)
 // -------------------------------------------------------------
 
 function WalletPage({ data, available, held, reload, notify, navigate, openRefill }: {
   data: Data | null; available: number; held: number; reload: () => Promise<any>;
   notify: (s: string) => void; navigate: (s: string) => void; openRefill: () => void;
 }) {
-  const [coins, setCoins] = useState("1000");
-  const [recipient, setRecipient] = useState("");
-  const [method, setMethod] = useState("qr");
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(false);
+  const [walletTab, setWalletTab] = useState<"conversions" | "payouts" | "topups" | "transfers" | "ledger">("conversions");
+
+  // Conversion state (Ví Xu -> Ví Chính)
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertCoinsInput, setConvertCoinsInput] = useState("1000");
+
+  // Withdrawal state (Ví Chính -> Payoneer)
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawUsdInput, setWithdrawUsdInput] = useState("10");
+
+  // Payoneer Linking modal
+  const [showLinkPayoneerModal, setShowLinkPayoneerModal] = useState(false);
+  const [payoneerEmailInput, setPayoneerEmailInput] = useState(data?.user?.payoneerEmail || "");
+
+  // P2P Transfer state (Level 10+)
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTarget, setTransferTarget] = useState("");
   const [transferAmount, setTransferAmount] = useState("100");
   const [transferNote, setTransferNote] = useState("");
 
-  const req = useRef(crypto.randomUUID());
-  const transferReq = useRef(crypto.randomUUID());
+  const availableCoins = data?.user?.availableCoins ?? available;
+  const heldCoins = data?.user?.heldCoins ?? held;
+  const mainUsdBalance = (data?.user?.mainUsdBalance || 0) / 100;
+  const mainUsdHeldBalance = (data?.user?.mainUsdHeldBalance || 0) / 100;
+  const payoneerEmail = data?.user?.payoneerEmail || "";
+  const userLevel = data?.user?.level || 1;
+  const canWithdraw = (data?.user?.levelInfo?.canWithdraw ?? userLevel >= 50);
+  const maxWithdrawalUsd = data?.user?.levelInfo?.maxWithdrawalUsd || (userLevel >= 100 ? 500 : (userLevel >= 50 ? 50 : 0));
 
-  const amount = Number(coins);
-  const valid = Number.isSafeInteger(amount) && amount >= 1000 && amount % 10 === 0;
+  // Handle Coin Conversion to Main USD
+  const submitConversion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cAmount = Number(convertCoinsInput);
+    if (!Number.isSafeInteger(cAmount) || cAmount < 1000) {
+      notify("Số xu quy đổi tối thiểu là 1.000 xu ($1.00 USD).");
+      return;
+    }
+    if (cAmount % 10 !== 0) {
+      notify("Số xu quy đổi phải là bội số của 10.");
+      return;
+    }
+    if (cAmount > availableCoins) {
+      notify("Số dư xu khả dụng trong Ví Xu không đủ.");
+      return;
+    }
 
-  const submitPayout = async () => {
     setBusy(true);
     try {
-      await action("payout.create", { coins: amount, recipient, method, requestKey: req.current });
+      await action("wallet.convert_coins", {
+        coins: cAmount,
+        requestKey: crypto.randomUUID()
+      });
       await reload();
-      setConfirm(false);
-      req.current = crypto.randomUUID();
-      notify("Đã tạo yêu cầu rút thử nghiệm. Xu tương ứng đang được giữ.");
+      setShowConvertModal(false);
+      notify(`Đã gửi yêu cầu đổi ${number(cAmount)} xu sang $${(cAmount / 1000).toFixed(2)} USD vào Ví Chính. Vui lòng chờ Admin duyệt!`);
     } catch (e: any) {
       notify(e.message);
     } finally {
@@ -2360,22 +2458,100 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
     }
   };
 
+  // Handle Payoneer Withdrawal from Main USD Wallet
+  const submitWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payoneerEmail) {
+      notify("Bạn cần liên kết địa chỉ ví Payoneer trước khi tạo lệnh rút tiền.");
+      setShowWithdrawModal(false);
+      setShowLinkPayoneerModal(true);
+      return;
+    }
+    if (!canWithdraw) {
+      notify("Bạn cần đạt tối thiểu Cấp 50 để mở khóa quyền rút tiền về ví Payoneer.");
+      return;
+    }
+    const wAmount = Number(withdrawUsdInput);
+    if (isNaN(wAmount) || wAmount < 10) {
+      notify("Số tiền rút tối thiểu là $10.00 USD.");
+      return;
+    }
+    if (wAmount > mainUsdBalance) {
+      notify("Số dư trong Ví Chính ($) không đủ để rút số tiền này.");
+      return;
+    }
+    if (wAmount > maxWithdrawalUsd) {
+      notify(`Hạn mức rút tối đa cho Cấp ${userLevel} là $${maxWithdrawalUsd}.00 USD/ngày.`);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const fee = Math.round(wAmount * 0.15 * 100) / 100;
+      const net = Math.round((wAmount - fee) * 100) / 100;
+      await action("payout.create", {
+        usdAmount: wAmount,
+        payoneerEmail,
+        requestKey: crypto.randomUUID()
+      });
+      await reload();
+      setShowWithdrawModal(false);
+      notify(`Đã tạo lệnh rút $${wAmount.toFixed(2)} USD (Phí 15%: $${fee.toFixed(2)}, Thực nhận Payoneer: $${net.toFixed(2)}). Admin đang kiểm tra để chuyển tiền!`);
+    } catch (e: any) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Handle Linking Payoneer Email
+  const submitLinkPayoneer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payoneerEmailInput.trim() || !payoneerEmailInput.includes("@")) {
+      notify("Vui lòng nhập địa chỉ email Payoneer hợp lệ.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await action("user.link_payoneer", { email: payoneerEmailInput.trim() });
+      await reload();
+      setShowLinkPayoneerModal(false);
+      notify(`Đã liên kết ví Payoneer thành công: ${payoneerEmailInput.trim()}`);
+    } catch (e: any) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Handle P2P Transfer (Requires Level >= 10)
   const submitTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (userLevel < 10) {
+      notify("Bạn cần đạt Cấp 10 trở lên để mở khóa tính năng Chuyển xu P2P.");
+      return;
+    }
     const tCoins = Number(transferAmount);
     if (!Number.isSafeInteger(tCoins) || tCoins < 10) {
       notify("Số xu chuyển tối thiểu là 10 xu.");
       return;
     }
+    if (tCoins > availableCoins) {
+      notify("Số dư xu khả dụng trong Ví Xu không đủ.");
+      return;
+    }
+
     setBusy(true);
     try {
       await action("transfer.create", {
-        recipient: transferTarget, coins: tCoins, note: transferNote, requestKey: transferReq.current
+        recipient: transferTarget,
+        coins: tCoins,
+        note: transferNote,
+        requestKey: crypto.randomUUID()
       });
       await reload();
       setShowTransfer(false);
       setTransferTarget("");
-      transferReq.current = crypto.randomUUID();
       notify(`Đã chuyển thành công ${number(tCoins)} xu cho ${transferTarget}!`);
     } catch (e: any) {
       notify(e.message);
@@ -2388,35 +2564,184 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
     <section className="wallet-page">
       <div className="section-heading">
         <div>
-          <span className="eyebrow subtle">MỌI THÀNH TÍCH ĐỀU ĐƯỢC GHI NHẬN</span>
-          <h1>Ví của tôi<span className="pill">Sandbox</span></h1>
+          <span className="eyebrow subtle">TÀI CHÍNH & VÍ ĐIỆN TỬ JINQP</span>
+          <h1>Quản lý 2 Ví tách biệt<span className="pill">Ví Xu & Ví Chính</span></h1>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button className="btn lime small" onClick={openRefill}><Coins size={16} /> Nạp số dư</button>
-          <button className="btn secondary small" onClick={() => setShowTransfer(true)}><Send size={16} /> Chuyển xu P2P</button>
-          <button className="btn secondary small" onClick={() => reload().catch((e: any) => notify(e.message))}><RefreshCw size={16} /> Làm mới</button>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button className="btn lime small" onClick={openRefill}>
+            <Coins size={16} /> Nạp xu (Phí 0%)
+          </button>
+          <button className="btn secondary small" onClick={() => setShowConvertModal(true)}>
+            <RefreshCw size={16} /> Đổi xu sang Ví Chính ($)
+          </button>
+          <button
+            className={`btn small ${canWithdraw ? "lime" : "secondary"}`}
+            onClick={() => {
+              if (!payoneerEmail) {
+                setShowLinkPayoneerModal(true);
+              } else {
+                setShowWithdrawModal(true);
+              }
+            }}
+          >
+            <ArrowUpRight size={16} /> Rút tiền về Payoneer
+          </button>
+          <button
+            className="btn secondary small"
+            onClick={() => {
+              if (userLevel < 10) {
+                notify(`🔒 Tính năng Chuyển xu P2P mở khóa ở Cấp 10 (Hiện tại: Cấp ${userLevel}). Hãy chơi game để tăng cấp nhé!`);
+              } else {
+                setShowTransfer(true);
+              }
+            }}
+          >
+            <Send size={16} /> Chuyển xu P2P {userLevel < 10 && "🔒"}
+          </button>
         </div>
       </div>
 
-      <div className="wallet-stats">
-        <div className="wallet-primary">
-          <span><Wallet size={18} />Xu khả dụng</span>
-          <strong><Coin size={32} />{number(available)}<small>xu</small></strong>
-          <p>Tương đương ${(available / 1000).toFixed(3)} USD <span>· Tỷ lệ quy đổi: 1.000 xu = 1 USD</span></p>
-          <div>
-            <span>Sổ cái kép tự động đối soát</span>
-            <Shield size={17} />
+      {/* 2 DISTINCT WALLETS SECTION */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px", marginBottom: "24px" }}>
+        
+        {/* WALLET 1: VÍ XU (COIN WALLET) */}
+        <div className="panel" style={{ background: "linear-gradient(145deg, rgba(255, 184, 0, 0.08) 0%, rgba(17, 20, 28, 0.95) 100%)", border: "1px solid rgba(255, 184, 0, 0.25)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, background: "radial-gradient(circle, rgba(255,184,0,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="strip-icon amber" style={{ width: 40, height: 40 }}><Coins size={22} /></span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--amber)" }}>VÍ XU (Game Coins)</h3>
+                <small style={{ color: "var(--muted)" }}>Xu nạp & xu thưởng chơi game</small>
+              </div>
+            </div>
+            <span className="pill" style={{ background: "rgba(255,184,0,0.15)", color: "var(--amber)", border: "1px solid rgba(255,184,0,0.3)" }}>Phí nạp: 0% Free</span>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Số dư khả dụng</div>
+            <div style={{ fontSize: "2.1rem", fontWeight: 800, color: "#fff", display: "flex", alignItems: "baseline", gap: "8px", margin: "4px 0" }}>
+              <Coin size={30} />
+              {number(availableCoins)}
+              <span style={{ fontSize: "1rem", color: "var(--amber)", fontWeight: 600 }}>xu</span>
+            </div>
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--muted)" }}>
+              Tương đương: <strong>${(availableCoins / 1000).toFixed(2)} USD</strong> (Tỷ lệ: 1.000 xu = $1.00 USD)
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "12px", background: "rgba(0,0,0,0.25)", borderRadius: "10px", marginBottom: "16px" }}>
+            <div>
+              <small style={{ color: "var(--muted)", display: "block" }}>Xu đang giữ (Đổi $):</small>
+              <strong style={{ color: "var(--text)", fontSize: "1rem" }}>{number(heldCoins)} xu</strong>
+            </div>
+            <div>
+              <small style={{ color: "var(--muted)", display: "block" }}>Xu nhận hôm nay:</small>
+              <strong style={{ color: "var(--mint)", fontSize: "1rem" }}>+{number(data?.user?.earnedToday || 0)} xu</strong>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button className="btn lime small" style={{ flex: 1 }} onClick={openRefill}>
+              <Coins size={14} /> Nạp thêm xu (0% Phí)
+            </button>
+            <button className="btn secondary small" style={{ flex: 1 }} onClick={() => setShowConvertModal(true)}>
+              <RefreshCw size={14} /> Đổi sang Ví Chính ($)
+            </button>
           </div>
         </div>
-        <div className="stat-card">
-          <span><Clock3 size={20} />Xu đang giữ</span>
-          <strong>{number(held)} <small>xu</small></strong>
-          <p>Cho yêu cầu rút đang chờ duyệt</p>
+
+        {/* WALLET 2: VÍ CHÍNH (MAIN USD WALLET) */}
+        <div className="panel" style={{ background: "linear-gradient(145deg, rgba(180, 248, 86, 0.08) 0%, rgba(17, 20, 28, 0.95) 100%)", border: "1px solid rgba(180, 248, 86, 0.25)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, background: "radial-gradient(circle, rgba(180,248,86,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="strip-icon lime" style={{ width: 40, height: 40 }}><Wallet size={22} /></span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--lime)" }}>VÍ CHÍNH ($ USD)</h3>
+                <small style={{ color: "var(--muted)" }}>Số dư rút về ví Payoneer</small>
+              </div>
+            </div>
+            <span className="pill" style={{ background: "rgba(180,248,86,0.15)", color: "var(--lime)", border: "1px solid rgba(180,248,86,0.3)" }}>Phí rút: 15%/lệnh</span>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Số dư khả dụng</div>
+            <div style={{ fontSize: "2.1rem", fontWeight: 800, color: "var(--lime)", display: "flex", alignItems: "baseline", gap: "6px", margin: "4px 0" }}>
+              ${mainUsdBalance.toFixed(2)}
+              <span style={{ fontSize: "1rem", color: "var(--muted)", fontWeight: 600 }}>USD</span>
+            </div>
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--muted)" }}>
+              Ví Payoneer liên kết:{" "}
+              {payoneerEmail ? (
+                <strong style={{ color: "#fff" }}>{payoneerEmail}</strong>
+              ) : (
+                <span style={{ color: "var(--rose)" }}>Chưa liên kết</span>
+              )}
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "12px", background: "rgba(0,0,0,0.25)", borderRadius: "10px", marginBottom: "16px" }}>
+            <div>
+              <small style={{ color: "var(--muted)", display: "block" }}>USD đang chờ rút:</small>
+              <strong style={{ color: "var(--text)", fontSize: "1rem" }}>${mainUsdHeldBalance.toFixed(2)} USD</strong>
+            </div>
+            <div>
+              <small style={{ color: "var(--muted)", display: "block" }}>Hạn mức rút:</small>
+              <strong style={{ color: canWithdraw ? "var(--lime)" : "var(--muted)", fontSize: "1rem" }}>
+                {canWithdraw ? `$${maxWithdrawalUsd}/ngày (Lv.${userLevel})` : "Mở ở Cấp 50 🔒"}
+              </strong>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button
+              className="btn lime small"
+              style={{ flex: 1 }}
+              onClick={() => {
+                if (!payoneerEmail) {
+                  setShowLinkPayoneerModal(true);
+                } else {
+                  setShowWithdrawModal(true);
+                }
+              }}
+            >
+              <ArrowUpRight size={14} /> Rút tiền về Payoneer (Phí 15%)
+            </button>
+            <button className="btn secondary small" style={{ flex: 1 }} onClick={() => setShowLinkPayoneerModal(true)}>
+              <Link2 size={14} /> {payoneerEmail ? "Đổi ví Payoneer" : "Liên kết Payoneer"}
+            </button>
+          </div>
         </div>
-        <div className="stat-card">
-          <span><Sparkles size={20} />Xu nhận hôm nay</span>
-          <strong>{number(data?.user?.earnedToday || 0)} <small>xu</small></strong>
-          <p>{data?.user?.membership ? `Hạn mức ${number(data.user.membership.terms.daily_cap)} xu/ngày` : "Gói thành viên mở quyền tích xu"}</p>
+
+      </div>
+
+      {/* FINANCIAL DISCLAIMER & RULE CLARIFICATION BANNER */}
+      <div className="panel" style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "24px", padding: "18px 22px" }}>
+        <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+          <ShieldCheck size={26} style={{ color: "var(--lime)", flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <h4 style={{ margin: "0 0 6px 0", fontSize: "0.98rem", color: "#fff" }}>
+              Quy chế tài chính, nạp rút và đối soát Payoneer minh bạch
+            </h4>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", lineHeight: "1.6" }}>
+              <p style={{ margin: "0 0 6px 0" }}>
+                • <strong>Bản chất số dư:</strong> Các con số trên <strong>Ví Xu</strong> và <strong>Ví Chính</strong> là điểm số và số dư trong hệ thống web game JINQP. Tiền thật chỉ tồn tại trong tài khoản Payoneer của người chơi và Ban Quản Trị.
+              </p>
+              <p style={{ margin: "0 0 6px 0" }}>
+                • <strong>Nạp xu (Phí 0% Free):</strong> Người chơi chuyển tiền qua Payoneer và gửi yêu cầu nạp, Admin kiểm tra đối soát và duyệt nạp 100% số xu vào Ví Xu tương ứng (Tỷ lệ: 1 USD = 1.000 xu, không thu bất kỳ khoản phí nạp nào).
+              </p>
+              <p style={{ margin: "0 0 6px 0" }}>
+                • <strong>Quy đổi xu sang Ví Chính ($):</strong> Người chơi tạo yêu cầu đổi xu sang Ví Chính (Tỷ lệ: 1.000 xu = $1.00 USD, Phí đổi 0%). Ban Quản Trị kiểm tra kết quả chơi game hợp lệ và duyệt chuyển số dư USD vào Ví Chính.
+              </p>
+              <p style={{ margin: "0 0 6px 0" }}>
+                • <strong>Rút tiền về ví Payoneer (Phí 15%/lệnh):</strong> Khi tạo lệnh rút từ Ví Chính, hệ thống khấu trừ 15% phí xử lý dịch vụ. Admin kiểm tra lệnh, tiến hành chuyển tiền thật (Net 85%) từ ví Payoneer của Admin sang địa chỉ Payoneer mà bạn đã liên kết, sau đó xác nhận thành công trên hệ thống và gửi thông báo kèm mã giao dịch Payoneer.
+              </p>
+              <p style={{ margin: 0 }}>
+                • <strong>Chuyển xu P2P:</strong> Tính năng chuyển xu trực tiếp giữa người chơi với nhau yêu cầu tài khoản đạt tối thiểu <strong>Cấp 10</strong> trở lên.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2426,7 +2751,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
           <span className="strip-icon mint"><Coins size={22} /></span>
           <div>
             <h3>Ví nhận tiền & Cổng nạp xu Payoneer</h3>
-            <p>Quét mã QR hoặc truy cập liên kết Payoneer bên dưới để nạp tiền vào ví nhận JINQP Gaming Center (Tỷ lệ quy đổi: 1 USD = 1.000 xu).</p>
+            <p>Quét mã QR hoặc truy cập liên kết Payoneer bên dưới để nạp tiền vào ví nhận JINQP Gaming Center (Tỷ lệ quy đổi: 1 USD = 1.000 xu · Phí nạp: 0% Miễn phí).</p>
           </div>
         </div>
         <div className="payoneer-wallet-body">
@@ -2436,7 +2761,7 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
           </div>
           <div className="payoneer-wallet-details">
             <div className="payoneer-link-field">
-              <label style={{ fontSize: "11px", fontWeight: "600", color: "#a4adc9" }}>Liên kết ví nhận tiền Payoneer:</label>
+              <label style={{ fontSize: "11px", fontWeight: "600", color: "#a4adc9" }}>Liên kết ví nhận tiền Payoneer Ban Quản Trị:</label>
               <div className="copy-input-row">
                 <input readOnly value={PAYONEER_RECEIVING_URL} />
                 <button
@@ -2462,78 +2787,213 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
                 <ExternalLink size={14} /> Mở cổng Payoneer
               </a>
               <button className="btn secondary small" onClick={openRefill}>
-                <Coins size={14} /> Tạo đơn nạp xu
+                <Coins size={14} /> Tạo đơn nạp xu (0% Phí)
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="wallet-columns">
-        {data?.user?.levelInfo?.canWithdraw ? (
-          <div className="panel convert-panel">
-            <span className="eyebrow subtle">TỪ XU ĐẾN GIÁ TRỊ</span>
-            <h2>Quy đổi & yêu cầu rút</h2>
-            <p>Hạn mức: tối đa ${data.user.levelInfo.maxWithdrawalUsd} USD/lần · 1 lần rút mỗi 24 giờ.</p>
-            <label>Số xu quy đổi
-              <div className="input-with-unit">
-                <input
-                  type="number"
-                  min="1000"
-                  max={data.user.levelInfo.maxWithdrawalUsd * 1000}
-                  step="10"
-                  value={coins}
-                  onChange={e => setCoins(e.target.value)}
-                  aria-label="Số xu quy đổi"
-                />
-                <span>xu</span>
-              </div>
-            </label>
-            <div className="conversion-result">
-              <span>Số tiền tương đương</span>
-              <strong>{Number.isFinite(amount) ? money(Math.floor(amount / 10)) : "$0.00"}<small>USD</small></strong>
-              <span>1.000 xu = 1 USD · Phí thử nghiệm: $0</span>
-            </div>
-            <div className="method-tabs">
-              <button className={method === "qr" ? "selected" : ""} onClick={() => setMethod("qr")}><QrCode size={17} />Nhận qua QR</button>
-              <button className={method === "link" ? "selected" : ""} onClick={() => setMethod("link")}><Link2 size={17} />Link ví Payoneer</button>
-            </div>
-            <label>Link nhận tiền Payoneer
-              <input type="url" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="https://…payoneer.com/…" />
-            </label>
-            <p className="field-hint">Chỉ dùng link thử nghiệm; không nhập OTP hay mật khẩu.</p>
+      {/* TRANSACTION HISTORY TABS */}
+      <div className="panel" style={{ marginTop: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "12px", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             <button
-              className="btn lime full"
-              disabled={!data?.user || !valid || !recipient || amount > available || amount > data.user.levelInfo.maxWithdrawalUsd * 1000}
-              onClick={() => setConfirm(true)}
+              className={`btn small ${walletTab === "conversions" ? "lime" : "secondary"}`}
+              onClick={() => setWalletTab("conversions")}
             >
-              Xem lại yêu cầu rút <ArrowRight size={17} />
+              <RefreshCw size={14} /> Đổi xu sang $ ({data?.user?.conversions?.length || 0})
+            </button>
+            <button
+              className={`btn small ${walletTab === "payouts" ? "lime" : "secondary"}`}
+              onClick={() => setWalletTab("payouts")}
+            >
+              <ArrowUpRight size={14} /> Lệnh rút Payoneer ({data?.user?.payouts?.length || 0})
+            </button>
+            <button
+              className={`btn small ${walletTab === "topups" ? "lime" : "secondary"}`}
+              onClick={() => setWalletTab("topups")}
+            >
+              <Coins size={14} /> Đơn nạp ({data?.user?.orders?.length || 0})
+            </button>
+            <button
+              className={`btn small ${walletTab === "transfers" ? "lime" : "secondary"}`}
+              onClick={() => setWalletTab("transfers")}
+            >
+              <Send size={14} /> Chuyển xu P2P ({data?.user?.transfers?.length || 0})
+            </button>
+            <button
+              className={`btn small ${walletTab === "ledger" ? "lime" : "secondary"}`}
+              onClick={() => setWalletTab("ledger")}
+            >
+              <Clock3 size={14} /> Sổ cái đối soát
             </button>
           </div>
-        ) : (
-          <div className="panel convert-panel">
-            <span className="eyebrow subtle">TÍNH NĂNG RÚT TIỀN</span>
-            <h2>Quy đổi & rút tiền Payoneer</h2>
-            <div style={{ background: "#101524", border: "1px solid #1f273d", borderRadius: "10px", padding: "24px 16px", margin: "14px 0", textAlign: "center" }}>
-              <Lock size={32} style={{ color: "#8b94ac", margin: "0 auto 12px auto", display: "block" }} />
-              <strong style={{ display: "block", color: "#fff", marginBottom: "8px", fontSize: "14px" }}>Tính năng đang được kích hoạt</strong>
-              <p style={{ fontSize: "12px", color: "#8b94ac", margin: 0, lineHeight: "1.6" }}>
-                Tính năng rút tiền về ví Payoneer sẽ tự động mở khóa theo tiến trình hoạt động và đóng góp của tài khoản trên nền tảng.
-              </p>
-            </div>
+          <button className="btn secondary small" onClick={() => reload().catch((e: any) => notify(e.message))}>
+            <RefreshCw size={14} /> Làm mới
+          </button>
+        </div>
+
+        {/* TAB 1: COIN CONVERSIONS TO MAIN USD */}
+        {walletTab === "conversions" && (
+          <div>
+            {data?.user?.conversions?.length ? (
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Thời gian / Mã đơn</th>
+                      <th>Số xu quy đổi</th>
+                      <th>USD nhận vào Ví Chính</th>
+                      <th>Phí đổi</th>
+                      <th>Trạng thái</th>
+                      <th>Ghi chú Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.user.conversions.map((c: any) => (
+                      <tr key={c.id}>
+                        <td>
+                          <strong>#{c.id.slice(0, 8)}</strong>
+                          <small>{date(c.created_at)}</small>
+                        </td>
+                        <td><strong style={{ color: "var(--amber)" }}>{number(c.coins)} xu</strong></td>
+                        <td><strong style={{ color: "var(--lime)" }}>${(c.usd_cents / 100).toFixed(2)} USD</strong></td>
+                        <td><span className="pill">0% (Miễn phí)</span></td>
+                        <td>
+                          <span className={`status ${c.status}`}>
+                            {c.status === "pending" ? "Chờ Admin duyệt" : c.status === "approved" ? "Đã duyệt vào Ví Chính" : "Từ chối (Đã hoàn xu)"}
+                          </span>
+                        </td>
+                        <td><small>{c.admin_note || (c.status === "pending" ? "Đang xử lý đối soát" : "Hoàn tất")}</small></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-small">
+                <RefreshCw size={26} />
+                <p>Chưa có yêu cầu quy đổi xu nào.</p>
+                <button className="btn lime small" style={{ marginTop: 8 }} onClick={() => setShowConvertModal(true)}>
+                  Tạo yêu cầu đổi xu sang Ví Chính ($)
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        <div>
-          <div className="panel membership-wallet">
-            <Crown size={26} />
-            <h3>{data?.user?.membership ? `Thành viên ${tierNames[data.user.membership.terms.tier]}` : "Bắt đầu hành trình tích xu"}</h3>
-            <p>{data?.user?.membership ? `Hiệu lực đến ${date(data.user.membership.ends_at)}. Hoàn thành game để nhận xu trong hạn mức.` : "Chọn gói Đồng, Vàng hoặc Kim Cương để tích xu từ kết quả chơi hợp lệ."}</p>
-            <button className="btn secondary full" onClick={() => navigate("membership")}>Xem đặc quyền <ArrowUpRight size={16} /></button>
+        {/* TAB 2: PAYONEER PAYOUTS */}
+        {walletTab === "payouts" && (
+          <div>
+            {data?.user?.payouts?.length ? (
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Thời gian / Mã đơn</th>
+                      <th>Tổng rút (Gross)</th>
+                      <th>Phí rút (15%)</th>
+                      <th>Thực nhận Payoneer</th>
+                      <th>Ví Payoneer nhận</th>
+                      <th>Trạng thái</th>
+                      <th>Mã GD Payoneer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.user.payouts.map((p: any) => {
+                      const fee = p.fee_cents || Math.round(p.usd_cents * 0.15);
+                      const net = p.net_cents || (p.usd_cents - fee);
+                      return (
+                        <tr key={p.id}>
+                          <td>
+                            <strong>#{p.id.slice(0, 8)}</strong>
+                            <small>{date(p.created_at)}</small>
+                          </td>
+                          <td><strong>${(p.usd_cents / 100).toFixed(2)} USD</strong></td>
+                          <td><span style={{ color: "var(--rose)" }}>-${(fee / 100).toFixed(2)}</span></td>
+                          <td><strong style={{ color: "var(--lime)", fontSize: "1.05em" }}>${(net / 100).toFixed(2)} USD</strong></td>
+                          <td>
+                            <strong style={{ color: "var(--text)" }}>{p.recipient}</strong>
+                          </td>
+                          <td>
+                            <span className={`status ${p.status}`}>
+                              {p.status === "pending" ? "Chờ Admin chuyển tiền" : p.status === "approved" ? "Đang thực hiện chuyển" : p.status === "paid" ? "Đã chuyển tiền thành công" : "Từ chối (Đã hoàn $)"}
+                            </span>
+                          </td>
+                          <td>
+                            <small style={{ color: p.external_ref ? "var(--lime)" : "var(--muted)" }}>
+                              {p.external_ref || (p.status === "rejected" ? p.note : "Đang xử lý")}
+                            </small>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-small">
+                <ArrowUpRight size={26} />
+                <p>Chưa có yêu cầu rút tiền Payoneer nào.</p>
+                {canWithdraw ? (
+                  <button className="btn lime small" style={{ marginTop: 8 }} onClick={() => setShowWithdrawModal(true)}>
+                    Tạo lệnh rút tiền về Payoneer
+                  </button>
+                ) : (
+                  <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>Tính năng rút tiền sẽ mở khóa khi bạn đạt Cấp 50 (Hiện tại: Cấp {userLevel}).</p>
+                )}
+              </div>
+            )}
           </div>
+        )}
 
-          <div className="panel">
-            <h3>Lịch sử chuyển xu P2P</h3>
+        {/* TAB 3: TOPUP ORDERS */}
+        {walletTab === "topups" && (
+          <div>
+            {data?.user?.orders?.length ? (
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Thời gian / Mã</th>
+                      <th>Gói nạp</th>
+                      <th>Số tiền (USD)</th>
+                      <th>Phí nạp</th>
+                      <th>Phương thức</th>
+                      <th>Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.user.orders.map((o: any) => (
+                      <tr key={o.id}>
+                        <td>
+                          <strong>#{o.id.slice(0, 8)}</strong>
+                          <small>{date(o.created_at)}</small>
+                        </td>
+                        <td><strong>{o.plan_id}</strong></td>
+                        <td><strong>${(o.amount_cents / 100).toFixed(2)} USD</strong></td>
+                        <td><span className="pill">0% (Miễn phí)</span></td>
+                        <td>{o.method}</td>
+                        <td>
+                          <span className={`status ${o.status}`}>
+                            {o.status === "paid" ? "Đã cộng xu" : o.status === "pending" ? "Chờ xác nhận" : o.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-small"><Coins size={26} /><p>Chưa có đơn nạp nào.</p></div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: TRANSFERS P2P */}
+        {walletTab === "transfers" && (
+          <div>
             {data?.user?.transfers?.length ? (
               data.user.transfers.map((t: any) => {
                 const isSender = t.sender_id === data?.user?.id;
@@ -2553,100 +3013,279 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
                 );
               })
             ) : (
-              <div className="empty-small"><Send size={26} /><p>Chưa có giao dịch chuyển xu.</p></div>
+              <div className="empty-small">
+                <Send size={26} />
+                <p>Chưa có giao dịch chuyển xu P2P nào.</p>
+                {userLevel >= 10 ? (
+                  <button className="btn secondary small" style={{ marginTop: 8 }} onClick={() => setShowTransfer(true)}>
+                    Chuyển xu cho bạn bè
+                  </button>
+                ) : (
+                  <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>Chuyển xu P2P mở khóa khi đạt Cấp 10 (Hiện tại: Cấp {userLevel}).</p>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      </div>
+        )}
 
-      <div className="panel">
-        <div className="section-heading compact">
-          <h2>Giao dịch sổ cái gần đây</h2>
-          <span className="muted">50 bút toán gần nhất đối soát tự động</span>
-        </div>
-        {data?.user?.history?.length ? (
-          data.user.history.map((h: any) => (
-            <div className="history-row" key={h.id}>
-              <span className="history-icon"><Coin /></span>
-              <div>
-                <strong>{names[h.reason] || h.reason}</strong>
-                <span>{date(h.created_at)} · #{h.id.slice(0, 8)}</span>
-              </div>
-              <strong className={h.delta > 0 ? "positive" : ""}>
-                {h.delta > 0 ? "+" : ""}{number(h.delta)} xu
-              </strong>
-            </div>
-          ))
-        ) : (
-          <div className="empty-small"><Clock3 size={26} /><p>Lịch sử sẽ xuất hiện khi có giao dịch.</p></div>
+        {/* TAB 5: LEDGER */}
+        {walletTab === "ledger" && (
+          <div>
+            {data?.user?.history?.length ? (
+              data.user.history.map((h: any) => (
+                <div className="history-row" key={h.id}>
+                  <span className="history-icon"><Coin /></span>
+                  <div>
+                    <strong>{names[h.reason] || h.reason}</strong>
+                    <span>{date(h.created_at)} · #{h.id.slice(0, 8)}</span>
+                  </div>
+                  <strong className={h.delta > 0 ? "positive" : ""}>
+                    {h.delta > 0 ? "+" : ""}{number(h.delta)} xu
+                  </strong>
+                </div>
+              ))
+            ) : (
+              <div className="empty-small"><Clock3 size={26} /><p>Chưa có bút toán sổ cái.</p></div>
+            )}
+          </div>
         )}
       </div>
 
-      {showTransfer && (
-        <Modal title="Chuyển xu cho bạn bè (P2P Transfer)" onClose={() => setShowTransfer(false)}>
-          <form className="checkout-body" onSubmit={submitTransfer}>
-            <span className="eyebrow" style={{ color: "var(--lime)" }}><Send size={16} />CHUYỂN XU TỨC THÌ</span>
-            <h2>Chuyển xu an toàn</h2>
-            <p style={{ fontSize: "11px", marginBottom: "18px" }}>
-              Chuyển xu trực tiếp cho tài khoản khác trên nền tảng với bút toán sổ cái kép tức thì.
+      {/* MODAL 1: CONVERT COINS TO MAIN USD WALLET */}
+      {showConvertModal && (
+        <Modal title="Quy đổi xu sang Ví Chính ($)" onClose={() => setShowConvertModal(false)}>
+          <form className="checkout-body" onSubmit={submitConversion}>
+            <span className="eyebrow" style={{ color: "var(--lime)" }}><RefreshCw size={16} />QUY ĐỔI XU RA USD</span>
+            <h2>Chuyển đổi xu sang Ví Chính ($)</h2>
+            <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "16px", lineHeight: "1.5" }}>
+              Xu trong Ví Xu sẽ được chuyển đổi thành số dư USD trong Ví Chính theo tỷ lệ <strong>1.000 xu = $1.00 USD</strong>. Sau khi Admin phê duyệt, USD sẽ được cộng ngay vào Ví Chính để bạn rút về Payoneer!
             </p>
-            <label>Email hoặc ID người nhận
-              <input
-                required
-                type="text"
-                placeholder="nguoidung@example.com"
-                value={transferTarget}
-                onChange={e => setTransferTarget(e.target.value)}
-              />
+
+            <label>Số xu muốn quy đổi
+              <div className="input-with-unit" style={{ marginTop: 6 }}>
+                <input
+                  required
+                  type="number"
+                  min="1000"
+                  max={availableCoins}
+                  step="10"
+                  value={convertCoinsInput}
+                  onChange={e => setConvertCoinsInput(e.target.value)}
+                  placeholder="1000"
+                />
+                <span>xu</span>
+              </div>
+              <small style={{ color: "var(--muted)", marginTop: 4, display: "block" }}>
+                Số dư khả dụng: {number(availableCoins)} xu · Tối thiểu 1.000 xu
+              </small>
             </label>
-            <label style={{ marginTop: "14px" }}>Số xu muốn chuyển
-              <input
-                required
-                type="number"
-                min="10"
-                max={available}
-                step="10"
-                value={transferAmount}
-                onChange={e => setTransferAmount(e.target.value)}
-              />
-            </label>
-            <label style={{ marginTop: "14px" }}>Lời nhắn (tùy chọn)
-              <input
-                type="text"
-                maxLength={100}
-                placeholder="Tặng bạn ván chơi vui vẻ…"
-                value={transferNote}
-                onChange={e => setTransferNote(e.target.value)}
-              />
-            </label>
+
             <div className="checkout-summary" style={{ marginTop: "16px" }}>
-              <span>Số xu chuyển</span>
-              <strong>{number(Number(transferAmount))} xu</strong>
-              <span>Phí giao dịch</span>
-              <strong style={{ color: "var(--lime)" }}>0 xu</strong>
+              <span>Số xu trừ từ Ví Xu</span>
+              <strong style={{ color: "var(--amber)" }}>-{number(Number(convertCoinsInput) || 0)} xu</strong>
+              <span>USD nhận vào Ví Chính</span>
+              <strong style={{ color: "var(--lime)", fontSize: "1.1em" }}>+${((Number(convertCoinsInput) || 0) / 1000).toFixed(2)} USD</strong>
+              <span>Phí chuyển đổi</span>
+              <strong style={{ color: "var(--lime)" }}>0% (Miễn phí)</strong>
+              <span>Quy trình xử lý</span>
+              <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Admin kiểm duyệt đối soát</span>
             </div>
-            <button className="btn lime full" type="submit" disabled={busy || Number(transferAmount) > available || !transferTarget}>
-              {busy ? <Spinner /> : <Send size={16} />} Xác nhận chuyển xu
-            </button>
+
+            <div style={{ marginTop: 20 }}>
+              <button
+                className="btn lime full"
+                type="submit"
+                disabled={busy || Number(convertCoinsInput) < 1000 || Number(convertCoinsInput) > availableCoins}
+              >
+                {busy ? <Spinner /> : <CheckCircle2 size={18} />} Xác nhận gửi yêu cầu đổi xu
+              </button>
+            </div>
           </form>
         </Modal>
       )}
 
-      {confirm && (
-        <Modal title="Xác nhận yêu cầu rút thử nghiệm" onClose={() => setConfirm(false)}>
-          <div className="checkout-body">
-            <h2>Kiểm tra thông tin một lần nữa.</h2>
-            <div className="checkout-summary">
-              <span>Số xu được giữ</span><strong>{number(amount)} xu</strong>
-              <span>Tương đương</span><strong>{money(amount / 10)}</strong>
-              <span>Phí thử nghiệm</span><strong>$0</strong>
+      {/* MODAL 2: WITHDRAW USD FROM MAIN WALLET TO PAYONEER */}
+      {showWithdrawModal && (
+        <Modal title="Tạo lệnh rút tiền về ví Payoneer" onClose={() => setShowWithdrawModal(false)}>
+          <form className="checkout-body" onSubmit={submitWithdrawal}>
+            <span className="eyebrow" style={{ color: "var(--lime)" }}><ArrowUpRight size={16} />RÚT TIỀN THẬT QUA PAYONEER</span>
+            <h2>Rút tiền từ Ví Chính về Payoneer</h2>
+            
+            <div style={{ background: "rgba(180,248,86,0.06)", border: "1px solid rgba(180,248,86,0.2)", borderRadius: 10, padding: 12, marginBottom: 16 }}>
+              <small style={{ color: "var(--muted)", display: "block" }}>Địa chỉ ví Payoneer nhận tiền:</small>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                <strong style={{ color: "var(--lime)", fontSize: "1.05rem" }}>{payoneerEmail}</strong>
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  style={{ padding: "4px 10px", fontSize: "0.78rem" }}
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setShowLinkPayoneerModal(true);
+                  }}
+                >
+                  Đổi ví
+                </button>
+              </div>
             </div>
-            <p className="recipient-preview">Ví nhận: {recipient}</p>
-            <p className="info-note">Xu sẽ chuyển sang trạng thái đang giữ. Đây là yêu cầu thử nghiệm, không tạo lệnh chi tiền thật.</p>
-            <button className="btn lime full" onClick={submitPayout} disabled={busy}>
-              {busy ? <Spinner /> : <CheckCircle2 size={18} />}Xác nhận gửi yêu cầu
-            </button>
-          </div>
+
+            <label>Số USD muốn rút từ Ví Chính
+              <div className="input-with-unit" style={{ marginTop: 6 }}>
+                <input
+                  required
+                  type="number"
+                  min="10"
+                  max={Math.min(mainUsdBalance, maxWithdrawalUsd)}
+                  step="1"
+                  value={withdrawUsdInput}
+                  onChange={e => setWithdrawUsdInput(e.target.value)}
+                  placeholder="10"
+                />
+                <span>USD</span>
+              </div>
+              <small style={{ color: "var(--muted)", marginTop: 4, display: "block" }}>
+                Số dư Ví Chính: ${mainUsdBalance.toFixed(2)} USD · Hạn mức hôm nay: ${maxWithdrawalUsd}.00 USD
+              </small>
+            </label>
+
+            {/* CLEAR 15% FEE BREAKDOWN */}
+            {(() => {
+              const gross = Number(withdrawUsdInput) || 0;
+              const fee = Math.round(gross * 0.15 * 100) / 100;
+              const net = Math.round((gross - fee) * 100) / 100;
+              return (
+                <div className="checkout-summary" style={{ marginTop: "16px" }}>
+                  <span>Số tiền rút (Gross)</span>
+                  <strong>${gross.toFixed(2)} USD</strong>
+                  <span>Phí rút tiền dịch vụ (15%)</span>
+                  <strong style={{ color: "var(--rose)" }}>-${fee.toFixed(2)} USD</strong>
+                  <span style={{ fontWeight: 700, color: "var(--text)" }}>Thực nhận ví Payoneer (85%)</span>
+                  <strong style={{ color: "var(--lime)", fontSize: "1.15em" }}>${net.toFixed(2)} USD</strong>
+                  <span>Thời gian xử lý</span>
+                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Admin đối soát và chuyển tiền trong 24h</span>
+                </div>
+              );
+            })()}
+
+            <div style={{ marginTop: 20 }}>
+              <button
+                className="btn lime full"
+                type="submit"
+                disabled={busy || Number(withdrawUsdInput) < 10 || Number(withdrawUsdInput) > mainUsdBalance || Number(withdrawUsdInput) > maxWithdrawalUsd}
+              >
+                {busy ? <Spinner /> : <ArrowUpRight size={18} />} Xác nhận tạo lệnh rút tiền
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* MODAL 3: LINK PAYONEER WALLET */}
+      {showLinkPayoneerModal && (
+        <Modal title="Liên kết địa chỉ ví Payoneer" onClose={() => setShowLinkPayoneerModal(false)}>
+          <form className="checkout-body" onSubmit={submitLinkPayoneer}>
+            <span className="eyebrow" style={{ color: "var(--lime)" }}><Link2 size={16} />LIÊN KẾT THANH TOÁN</span>
+            <h2>Địa chỉ ví Payoneer nhận tiền</h2>
+            <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "16px", lineHeight: "1.5" }}>
+              Vui lòng nhập chính xác địa chỉ Email tài khoản Payoneer của bạn. Khi bạn tạo lệnh rút tiền từ Ví Chính, Admin sẽ thực hiện chuyển tiền thật vào địa chỉ Payoneer này.
+            </p>
+
+            <label>Email tài khoản Payoneer của bạn
+              <input
+                required
+                type="email"
+                placeholder="vidu: email_payoneer@gmail.com"
+                value={payoneerEmailInput}
+                onChange={e => setPayoneerEmailInput(e.target.value)}
+                style={{ marginTop: 6 }}
+              />
+            </label>
+
+            <div style={{ marginTop: 20 }}>
+              <button className="btn lime full" type="submit" disabled={busy || !payoneerEmailInput.trim()}>
+                {busy ? <Spinner /> : <Check size={18} />} Lưu liên kết ví Payoneer
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* MODAL 4: P2P TRANSFER (LOCKED FOR LEVEL < 10) */}
+      {showTransfer && (
+        <Modal title="Chuyển xu cho bạn bè (P2P Transfer)" onClose={() => setShowTransfer(false)}>
+          {userLevel < 10 ? (
+            <div className="checkout-body" style={{ textAlign: "center", padding: "24px 16px" }}>
+              <Lock size={44} style={{ color: "var(--amber)", margin: "0 auto 14px", display: "block" }} />
+              <h2 style={{ color: "#fff" }}>Tính năng khóa đến Cấp 10</h2>
+              <p style={{ fontSize: "0.9rem", color: "var(--muted)", lineHeight: "1.6", marginBottom: 20 }}>
+                Để đảm bảo an toàn giao dịch trên toàn hệ thống, tính năng Chuyển xu P2P chỉ mở khóa khi tài khoản của bạn đạt từ <strong>Cấp 10</strong> trở lên.
+              </p>
+              <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 10, padding: 14, marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span>Cấp độ hiện tại: <strong style={{ color: "var(--lime)" }}>Lv.{userLevel}</strong></span>
+                  <span>Mục tiêu mở khóa: <strong style={{ color: "var(--amber)" }}>Lv.10</strong></span>
+                </div>
+                <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.min(100, (userLevel / 10) * 100)}%`, height: "100%", background: "var(--lime)", borderRadius: 4 }} />
+                </div>
+              </div>
+              <button className="btn lime full" onClick={() => setShowTransfer(false)}>
+                Đã hiểu · Tiếp tục chơi game tăng cấp
+              </button>
+            </div>
+          ) : (
+            <form className="checkout-body" onSubmit={submitTransfer}>
+              <span className="eyebrow" style={{ color: "var(--lime)" }}><Send size={16} />CHUYỂN XU TỨC THÌ (CẤP 10+)</span>
+              <h2>Chuyển xu an toàn P2P</h2>
+              <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "16px" }}>
+                Chuyển xu trực tiếp cho tài khoản khác trên nền tảng với bút toán sổ cái kép tức thì.
+              </p>
+              <label>Email hoặc ID người nhận
+                <input
+                  required
+                  type="text"
+                  placeholder="nguoidung@example.com"
+                  value={transferTarget}
+                  onChange={e => setTransferTarget(e.target.value)}
+                  style={{ marginTop: 6 }}
+                />
+              </label>
+              <label style={{ marginTop: "14px" }}>Số xu muốn chuyển
+                <input
+                  required
+                  type="number"
+                  min="10"
+                  max={availableCoins}
+                  step="10"
+                  value={transferAmount}
+                  onChange={e => setTransferAmount(e.target.value)}
+                  style={{ marginTop: 6 }}
+                />
+                <small style={{ color: "var(--muted)", marginTop: 4, display: "block" }}>
+                  Số dư khả dụng: {number(availableCoins)} xu
+                </small>
+              </label>
+              <label style={{ marginTop: "14px" }}>Lời nhắn (tùy chọn)
+                <input
+                  type="text"
+                  maxLength={100}
+                  placeholder="Tặng bạn ván chơi vui vẻ…"
+                  value={transferNote}
+                  onChange={e => setTransferNote(e.target.value)}
+                  style={{ marginTop: 6 }}
+                />
+              </label>
+              <div className="checkout-summary" style={{ marginTop: "16px" }}>
+                <span>Số xu chuyển</span>
+                <strong>{number(Number(transferAmount) || 0)} xu</strong>
+                <span>Phí giao dịch</span>
+                <strong style={{ color: "var(--lime)" }}>0 xu (Miễn phí)</strong>
+              </div>
+              <button className="btn lime full" type="submit" disabled={busy || Number(transferAmount) > availableCoins || !transferTarget}>
+                {busy ? <Spinner /> : <Send size={16} />} Xác nhận chuyển xu
+              </button>
+            </form>
+          )}
         </Modal>
       )}
     </section>
@@ -2753,6 +3392,8 @@ function SettingsPage({
   onSelectCurrency,
   notify,
   t,
+  data,
+  reload,
 }: {
   lang: Locale;
   onSelectLang: (l: Locale) => void;
@@ -2764,13 +3405,70 @@ function SettingsPage({
   onSelectCurrency: (c: "vnd" | "usd") => void;
   notify: (s: string) => void;
   t: (k: TranslationKey) => string;
+  data: Data | null;
+  reload: () => Promise<any>;
 }) {
+  const [payoneerEmail, setPayoneerEmail] = useState(data?.user?.payoneerEmail || "");
+  const [busy, setBusy] = useState(false);
+
+  const savePayoneer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payoneerEmail.trim() || !payoneerEmail.includes("@")) {
+      notify("Vui lòng nhập email ví Payoneer hợp lệ.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await action("user.link_payoneer", { email: payoneerEmail.trim() });
+      await reload();
+      notify(`Đã lưu liên kết ví Payoneer thành công: ${payoneerEmail.trim()}`);
+    } catch (err: any) {
+      notify(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="settings-page">
       <div className="center-heading">
         <span className="eyebrow">JINQP SETTINGS</span>
         <h1>{t("settingsTitle")}</h1>
         <p>{t("settingsSubtitle")}</p>
+      </div>
+
+      {/* PAYONEER WALLET LINKING SECTION */}
+      <div className="settings-section" style={{ border: "1px solid rgba(180, 248, 86, 0.25)", background: "linear-gradient(145deg, rgba(180, 248, 86, 0.05) 0%, rgba(17, 20, 28, 0.95) 100%)" }}>
+        <div className="settings-section-head">
+          <h2>
+            <Link2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 8, color: "var(--lime)" }} />
+            Liên kết địa chỉ ví Payoneer nhận tiền thưởng
+          </h2>
+          <p>
+            Địa chỉ email Payoneer dùng để nhận tiền thật khi bạn tạo lệnh rút tiền từ <strong>Ví Chính ($)</strong>. Tiền thật sẽ được Admin chuyển trực tiếp vào tài khoản Payoneer này (Phí rút: 15%/lệnh).
+          </p>
+        </div>
+
+        <form onSubmit={savePayoneer} style={{ padding: "0 20px 20px" }}>
+          <div style={{ display: "flex", gap: "10px", maxWidth: 520, flexWrap: "wrap" }}>
+            <input
+              type="email"
+              required
+              placeholder="nhap_email_payoneer@example.com"
+              value={payoneerEmail}
+              onChange={e => setPayoneerEmail(e.target.value)}
+              style={{ flex: 1, minWidth: 260, padding: "10px 14px", background: "var(--card-sub)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)" }}
+            />
+            <button className="btn lime" type="submit" disabled={busy || !payoneerEmail.trim()}>
+              {busy ? <Spinner /> : <Check size={16} />} Lưu ví Payoneer
+            </button>
+          </div>
+          {data?.user?.payoneerEmail && (
+            <small style={{ color: "var(--lime)", display: "block", marginTop: 8 }}>
+              ✓ Đã liên kết: <strong>{data.user.payoneerEmail}</strong>
+            </small>
+          )}
+        </form>
       </div>
 
       <div className="settings-section">

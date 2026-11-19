@@ -66,6 +66,22 @@
 .word-input-form{display:flex;gap:10px;justify-content:center;margin-top:15px}
 .word-input-form input{max-width:240px;text-align:center;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.15em}
 
+/* Racing Game Track */
+.racing-arena { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 15px 0; width: 100%; }
+.racing-track-wrap { position: relative; width: 320px; height: 260px; border-radius: 14px; background: linear-gradient(180deg, #090c14 0%, #151a28 60%, #1a2236 100%); border: 2px solid #2f364d; overflow: hidden; display: flex; box-shadow: inset 0 0 40px #000; }
+.racing-lane { flex: 1; border-right: 2px dashed rgba(255,255,255,0.15); position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 12px 0; }
+.racing-lane:last-child { border-right: none; }
+.racing-lane.hazard { background: rgba(232, 93, 117, 0.2); box-shadow: inset 0 0 20px rgba(232,93,117,0.3); }
+.racing-obstacle { font-size: 26px; animation: pulse 0.8s infinite; filter: drop-shadow(0 0 8px #ff4757); }
+.racing-car-elem { position: absolute; bottom: 18px; width: 44px; height: 60px; border-radius: 8px; background: linear-gradient(180deg, #00f2fe 0%, #4facfe 100%); color: #000; display: grid; place-items: center; box-shadow: 0 0 20px #00f2fe, 0 8px 12px rgba(0,0,0,0.5); font-weight: 900; transition: left 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 10; }
+.racing-controls { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 320px; }
+
+/* Action Combat Arena */
+.action-combat-arena { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 15px 0; width: 100%; }
+.action-target-card { width: 300px; height: 190px; border-radius: 16px; border: 2px solid #3d2332; background: radial-gradient(circle, #2d1622 0%, #140d12 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s; cursor: pointer; color: #fff; }
+.action-target-card.strike-ready { border-color: #ff4757; background: radial-gradient(circle, #5b1424 0%, #200810 100%); box-shadow: 0 0 35px rgba(255, 71, 87, 0.45); transform: scale(1.03); }
+.action-hud-text { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 800; color: #ff6b81; }
+
 /* Fullscreen Mode */
 .modal.fullscreen{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0;border:0}
 .modal.fullscreen .game-modal{min-height:calc(100vh - 65px)}
