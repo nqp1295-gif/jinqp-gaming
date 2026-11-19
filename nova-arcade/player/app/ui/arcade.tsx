@@ -2716,35 +2716,6 @@ function WalletPage({ data, available, held, reload, notify, navigate, openRefil
 
       </div>
 
-      {/* FINANCIAL DISCLAIMER & RULE CLARIFICATION BANNER */}
-      <div className="panel" style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "24px", padding: "18px 22px" }}>
-        <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-          <ShieldCheck size={26} style={{ color: "var(--lime)", flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <h4 style={{ margin: "0 0 6px 0", fontSize: "0.98rem", color: "#fff" }}>
-              Quy chế tài chính, nạp rút và đối soát Payoneer minh bạch
-            </h4>
-            <div style={{ fontSize: "0.85rem", color: "var(--muted)", lineHeight: "1.6" }}>
-              <p style={{ margin: "0 0 6px 0" }}>
-                • <strong>Bản chất số dư:</strong> Các con số trên <strong>Ví Xu</strong> và <strong>Ví Chính</strong> là điểm số và số dư trong hệ thống web game JINQP. Tiền thật chỉ tồn tại trong tài khoản Payoneer của người chơi và Ban Quản Trị.
-              </p>
-              <p style={{ margin: "0 0 6px 0" }}>
-                • <strong>Nạp xu (Phí 0% Free):</strong> Người chơi chuyển tiền qua Payoneer và gửi yêu cầu nạp, Admin kiểm tra đối soát và duyệt nạp 100% số xu vào Ví Xu tương ứng (Tỷ lệ: 1 USD = 1.000 xu, không thu bất kỳ khoản phí nạp nào).
-              </p>
-              <p style={{ margin: "0 0 6px 0" }}>
-                • <strong>Quy đổi xu sang Ví Chính ($):</strong> Người chơi tạo yêu cầu đổi xu sang Ví Chính (Tỷ lệ: 1.000 xu = $1.00 USD, Phí đổi 0%). Ban Quản Trị kiểm tra kết quả chơi game hợp lệ và duyệt chuyển số dư USD vào Ví Chính.
-              </p>
-              <p style={{ margin: "0 0 6px 0" }}>
-                • <strong>Rút tiền về ví Payoneer (Phí 15%/lệnh):</strong> Khi tạo lệnh rút từ Ví Chính, hệ thống khấu trừ 15% phí xử lý dịch vụ. Admin kiểm tra lệnh, tiến hành chuyển tiền thật (Net 85%) từ ví Payoneer của Admin sang địa chỉ Payoneer mà bạn đã liên kết, sau đó xác nhận thành công trên hệ thống và gửi thông báo kèm mã giao dịch Payoneer.
-              </p>
-              <p style={{ margin: 0 }}>
-                • <strong>Chuyển xu P2P:</strong> Tính năng chuyển xu trực tiếp giữa người chơi với nhau yêu cầu tài khoản đạt tối thiểu <strong>Cấp 10</strong> trở lên.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* CỔNG NẠP TIỀN & VÍ NHẬN PAYONEER */}
       <div className="panel payoneer-wallet-banner">
         <div className="payoneer-wallet-header">
